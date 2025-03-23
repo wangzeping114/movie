@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ShortVideo from '../views/ShortVideo.vue'
 import Login from '../views/Login.vue'
+import Profile from '../views/Profile.vue'
 
 const routes = [
   {
@@ -10,12 +11,19 @@ const routes = [
   {
     path: '/short-video',
     name: 'ShortVideo',
-    component: ShortVideo
+    component: ShortVideo,
+    meta: { requiresAuth: true }
   },
   {
     path: '/login',
     name: 'Login',
     component: Login
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -26,7 +34,13 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  next()
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  
+  if (to.meta.requiresAuth && !user.isLoggedIn) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router 
