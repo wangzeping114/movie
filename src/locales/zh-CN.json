@@ -1,0 +1,11 @@
+{
+  "search": {
+    "placeholder": "搜索视频、用户或话题",
+    "search": "搜索",
+    "history": "搜索历史",
+    "hot": "热门搜索"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+} 

@@ -1,5 +1,19 @@
 <template>
   <div class="short-video-container">
+    <!-- 搜索导航栏 -->
+    <div class="search-nav">
+      <div class="search-box" @click="showSearchPanel = true">
+        <span class="material-icons search-icon">search</span>
+        <span class="placeholder">{{ t('search.placeholder') }}</span>
+      </div>
+    </div>
+
+    <!-- 搜索面板 -->
+    <SearchPanel
+      v-model="showSearchPanel"
+      @search="handleSearch"
+    />
+
     <div 
       class="video-container" 
       ref="videoContainer"
@@ -74,11 +88,14 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import CommentPanel from '../components/CommentPanel.vue'
+import SearchPanel from '../components/SearchPanel.vue'
 
 console.log('ShortVideo component loaded')
 
 const router = useRouter()
+const { t } = useI18n()
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 const defaultAvatar = 'https://randomuser.me/api/portraits/lego/1.jpg'
 
@@ -114,6 +131,7 @@ let touchStartY = 0
 let touchEndY = 0
 let hasInteracted = false
 const showCommentPanel = ref(false)
+const showSearchPanel = ref(false)
 
 const handleTouchStart = (e) => {
   touchStartY = e.touches[0].clientY
@@ -235,6 +253,25 @@ const goToProfile = () => {
   }
 }
 
+// 处理搜索
+const handleSearch = (query) => {
+  if (!query.trim()) return
+  // TODO: 实现搜索功能
+  console.log('搜索:', query)
+}
+
+// 处理扫一扫
+const handleScan = () => {
+  // TODO: 实现扫一扫功能
+  console.log('扫一扫')
+}
+
+// 处理消息
+const handleMessage = () => {
+  // TODO: 实现消息功能
+  console.log('消息')
+}
+
 onMounted(() => {
   console.log('ShortVideo component mounted')
   // 组件加载后自动播放当前视频（静音）
@@ -275,7 +312,6 @@ const formatNumber = (count) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000;
   overflow: hidden;
 }
 
@@ -283,9 +319,10 @@ const formatNumber = (count) => {
   position: relative;
   height: 100vh;
   width: 100%;
-  background-color: #000;
   overflow: hidden;
   touch-action: pan-y;
+  padding-top: 56px;
+  background: #000;
 }
 
 .video-player {
@@ -293,17 +330,54 @@ const formatNumber = (count) => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease-out;
+  transition: all 0.3s ease-out;
+  background: #000;
+  opacity: 0;
+  transform: translateY(100%);
 }
 
 .video-player.active {
   transform: translateY(0);
   z-index: 1;
+  opacity: 1;
 }
 
 .video-player:not(.active) {
   transform: translateY(100%);
   z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 添加视频切换动画 */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.video-player.active {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+.video-player:not(.active) {
+  animation: slideDown 0.3s ease-out forwards;
 }
 
 .video-info {
@@ -369,23 +443,21 @@ const formatNumber = (count) => {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
 .action-icon i {
   font-size: 24px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   transition: all 0.3s ease;
 }
 
 .action-icon.liked {
-  background: rgba(255, 48, 64, 0.1);
+  background: transparent;
 }
 
 .action-icon.liked i {
@@ -442,6 +514,67 @@ const formatNumber = (count) => {
   border-radius: 20px 20px 0 0;
   z-index: 100;
   max-height: 80vh;
+  overflow-y: auto;
+}
+
+.search-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  pointer-events: none;
+  background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  border-radius: 20px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.search-box:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.search-icon {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+.placeholder {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
+
+/* 移除不需要的样式 */
+.nav-actions {
+  display: none;
+}
+
+/* 添加搜索面板样式 */
+:deep(.search-panel) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  z-index: 1000;
   overflow-y: auto;
 }
 </style> 

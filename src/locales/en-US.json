@@ -1,0 +1,11 @@
+{
+  "search": {
+    "placeholder": "Search videos, users or topics",
+    "search": "Search",
+    "history": "Search History",
+    "hot": "Hot Searches"
+  },
+  "common": {
+    "cancel": "Cancel"
+  }
+} 
