@@ -58,12 +58,23 @@
           <span class="material-icons">videocam_off</span>
           <p>还没有发布作品</p>
         </div>
-        <div v-else class="video-grid">
-          <div v-for="work in works" :key="work.id" class="video-item">
-            <video :src="work.url" class="video-preview"></video>
+        <div v-else class="video-list" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+          <div v-for="(video, index) in works" 
+               :key="index" 
+               class="video-item"
+               :style="{ transform: 'translateY(' + (currentIndex === index ? '0' : (index < currentIndex ? '-100%' : '100%')) + ')' }">
+            <video
+              :ref="el => setVideoRef(el, index)"
+              :src="video.url"
+              class="video-player"
+              loop
+              muted
+              @click="togglePlay(index)"
+              @ended="handleVideoEnd(index)"
+            ></video>
             <div class="video-info">
               <span class="material-icons">favorite</span>
-              <span>{{ formatCount(work.likes) }}</span>
+              <span>{{ formatCount(video.likes) }}</span>
             </div>
           </div>
         </div>
@@ -270,7 +281,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, onUnmounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -296,9 +307,56 @@ const userStats = ref({
   following: 89
 })
 
-// 示例作品数据
+// 作品和喜欢的视频列表
 const works = ref([])
 const likedVideos = ref([])
+
+// 示例视频列表
+const sampleVideos = [
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
+]
+
+// 生成随机视频数据
+const generateRandomVideos = (count) => {
+  return Array.from({ length: count }, (_, index) => ({
+    id: String(index + 1),
+    url: sampleVideos[index % sampleVideos.length],
+    authorName: user.username || '用户' + (index + 1),
+    authorAvatar: user.avatar || 'https://randomuser.me/api/portraits/men/' + (index + 1) + '.jpg',
+    description: '这是第' + (index + 1) + '个视频描述，展示精彩内容',
+    likes: Math.floor(Math.random() * 10000),
+    comments: Math.floor(Math.random() * 1000),
+    shares: Math.floor(Math.random() * 500),
+    isLiked: false,
+    isAnimating: false
+  }))
+}
+
+// 初始化视频数据
+works.value = generateRandomVideos(6)
+likedVideos.value = generateRandomVideos(4)
+
+const currentIndex = ref(0)
+const videoRefs = ref([])
+let touchStartY = 0
+let touchEndY = 0
+let hasInteracted = false
+
+// 初始化videoRefs数组
+onMounted(() => {
+  videoRefs.value = new Array(works.value.length).fill(null)
+})
+
+// 设置视频引用的函数
+const setVideoRef = (el, index) => {
+  if (el && videoRefs.value) {
+    videoRefs.value[index] = el
+  }
+}
 
 const editForm = reactive({
   username: user.username || '',
@@ -464,20 +522,40 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
-  // 加载用户作品和喜欢的视频
-  // 这里使用示例数据
-  works.value = Array.from({ length: 6 }, (_, i) => ({
-    id: i + 1,
-    url: 'https://example.com/video' + (i + 1) + '.mp4',
-    likes: Math.floor(Math.random() * 10000)
-  }))
-
-  likedVideos.value = Array.from({ length: 4 }, (_, i) => ({
-    id: i + 1,
-    url: 'https://example.com/video' + (i + 1) + '.mp4',
-    likes: Math.floor(Math.random() * 10000)
-  }))
+  // 组件加载时的其他初始化逻辑
 })
+
+const handleTouchStart = (e) => {
+  touchStartY = e.touches[0].clientY
+  hasInteracted = true
+}
+
+const handleTouchMove = (e) => {
+  touchEndY = e.touches[0].clientY
+}
+
+const handleTouchEnd = () => {
+  if (!hasInteracted) return
+
+  const touchDiff = touchEndY - touchStartY
+  if (touchDiff > 100) {
+    // Swipe down, next video
+    currentIndex.value = (currentIndex.value + 1) % works.value.length
+  } else if (touchDiff < -100) {
+    // Swipe up, previous video
+    currentIndex.value = (currentIndex.value - 1 + works.value.length) % works.value.length
+  }
+
+  hasInteracted = false
+}
+
+const togglePlay = (index) => {
+  // Implement video play logic here
+}
+
+const handleVideoEnd = (index) => {
+  // Implement video end logic here
+}
 </script>
 
 <style scoped>
@@ -911,5 +989,23 @@ onMounted(() => {
 
 .switch.active .switch-handle {
   transform: translateX(20px);
+}
+
+.video-list {
+  display: flex;
+  overflow: hidden;
+  height: 100%;
+}
+
+.video-item {
+  flex: 0 0 100%;
+  transform: translateX(0%);
+  transition: transform 0.5s ease;
+}
+
+.video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 </style> 
