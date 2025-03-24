@@ -1,74 +1,72 @@
 <template>
-  <div class="video-container">
-    <!-- 顶部导航区域 -->
-    <div class="top-nav">
-      <div class="user-profile" @click="goToProfile">
-        <img 
-          :src="user.avatar || 'https://picsum.photos/200'"
-          :alt="user.username || '未登录'"
-          class="user-avatar"
-        >
-        <div class="login-status" :class="{ 'logged-in': user.isLoggedIn }"></div>
+  <div class="short-video-container">
+    <div 
+      class="video-container" 
+      ref="videoContainer"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
+      <video
+        v-for="(video, index) in videos"
+        :key="video.id"
+        :src="video.url"
+        class="video-player"
+        :class="{ active: currentIndex === index }"
+        loop
+        muted
+        ref="videoRefs"
+        @click="togglePlay(index)"
+        @ended="handleVideoEnd(index)"
+      ></video>
+      
+      <!-- 视频信息 -->
+      <div class="video-info">
+        <div class="user-info">
+          <img :src="videos[currentIndex].authorAvatar" :alt="videos[currentIndex].authorName" class="avatar">
+          <span class="username">@{{ videos[currentIndex].authorName }}</span>
+        </div>
+        <p class="description">{{ videos[currentIndex].description }}</p>
       </div>
-    </div>
-    
-    <!-- 视频内容 -->
-    <div class="video-list" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
-      <div v-for="(video, index) in videos" 
-           :key="index" 
-           class="video-item"
-           :style="{ transform: 'translateY(' + (currentIndex === index ? '0' : (index < currentIndex ? '-100%' : '100%')) + ')' }">
-        <video
-          ref="videoRefs"
-          :src="video.url"
-          class="video-player"
-          loop
-          muted
-          playsinline
-          @click="togglePlay(index)"
-          @ended="handleVideoEnd(index)"
-        ></video>
-        
-        <div class="video-info">
-          <div class="author-info">
-            <img :src="video.authorAvatar" class="author-avatar" />
-            <span class="author-name">{{ video.authorName }}</span>
+
+      <!-- 右侧操作栏 -->
+      <div class="action-bar">
+        <!-- 头像 -->
+        <div class="user-profile" @click="goToProfile">
+          <img :src="user.avatar || defaultAvatar" :alt="user.username || '未登录'" class="profile-avatar">
+          <div class="status-indicator" :class="{ 'online': user.isLoggedIn }"></div>
+        </div>
+
+        <!-- 点赞按钮 -->
+        <div class="action-item" @click="handleLike(currentIndex)">
+          <div class="action-icon" :class="{ 'liked': videos[currentIndex].isLiked }">
+            <i class="material-icons">{{ videos[currentIndex].isLiked ? 'favorite' : 'favorite_border' }}</i>
           </div>
-          <div class="video-description">{{ video.description }}</div>
+          <span class="action-count">{{ formatNumber(videos[currentIndex].likes) }}</span>
+        </div>
+
+        <!-- 评论按钮 -->
+        <div class="action-item" @click="handleComment(currentIndex)">
+          <div class="action-icon">
+            <i class="material-icons">chat_bubble_outline</i>
+          </div>
+          <span class="action-count">{{ formatNumber(videos[currentIndex].comments) }}</span>
+        </div>
+
+        <!-- 分享按钮 -->
+        <div class="action-item" @click="handleShare(currentIndex)">
+          <div class="action-icon">
+            <i class="material-icons">share</i>
+          </div>
+          <span class="action-count">{{ formatNumber(videos[currentIndex].shares) }}</span>
         </div>
       </div>
-    </div>
 
-    <!-- 评论面板 -->
-    <CommentPanel 
-      v-model="showComments"
-      :video-id="String(currentIndex + 1)"
-    />
-
-    <!-- 右侧操作栏 -->
-    <div class="action-bar">
-      <div class="action-item" @click="handleLike(currentIndex)">
-        <span 
-          class="material-icons like-icon" 
-          :class="{ 
-            'liked': videos[currentIndex].isLiked,
-            'like-animation': videos[currentIndex].isAnimating 
-          }"
-        >
-          {{ videos[currentIndex].isLiked ? 'favorite' : 'favorite_border' }}
-        </span>
-        <span class="count" :class="{ 'liked': videos[currentIndex].isLiked }">
-          {{ formatCount(videos[currentIndex].likes) }}
-        </span>
-      </div>
-      <div class="action-item" @click="handleComment(currentIndex)">
-        <span class="material-icons">chat_bubble_outline</span>
-        <span class="count">{{ formatCount(videos[currentIndex].comments) }}</span>
-      </div>
-      <div class="action-item" @click="handleShare(currentIndex)">
-        <span class="material-icons">share</span>
-        <span class="count">{{ formatCount(videos[currentIndex].shares) }}</span>
-      </div>
+      <!-- 评论面板 -->
+      <CommentPanel
+        v-model="showCommentPanel"
+        :video-id="videos[currentIndex].id"
+      />
     </div>
   </div>
 </template>
@@ -82,6 +80,7 @@ console.log('ShortVideo component loaded')
 
 const router = useRouter()
 const user = JSON.parse(localStorage.getItem('user') || '{}')
+const defaultAvatar = 'https://randomuser.me/api/portraits/lego/1.jpg'
 
 // 示例视频列表
 const sampleVideos = [
@@ -109,13 +108,12 @@ const generateRandomVideos = (count) => {
 }
 
 const videos = ref(generateRandomVideos(5))
-
 const currentIndex = ref(0)
-const videoRefs = ref([])
+const videoRefs = ref(null)
 let touchStartY = 0
 let touchEndY = 0
 let hasInteracted = false
-const showComments = ref(false)
+const showCommentPanel = ref(false)
 
 const handleTouchStart = (e) => {
   touchStartY = e.touches[0].clientY
@@ -138,10 +136,16 @@ const handleTouchEnd = () => {
 }
 
 const togglePlay = async (index) => {
+  if (!videoRefs.value) return
   const video = videoRefs.value[index]
+  if (!video) return
+  
   try {
     if (video.paused) {
+      // 取消静音并播放
+      video.muted = false
       await video.play()
+      hasInteracted = true
     } else {
       video.pause()
     }
@@ -151,19 +155,26 @@ const togglePlay = async (index) => {
 }
 
 const handleVideoEnd = (index) => {
-  if (index === currentIndex.value) {
-    videoRefs.value[index].play()
+  if (!videoRefs.value) return
+  const video = videoRefs.value[index]
+  if (video && index === currentIndex.value) {
+    video.play().catch(error => {
+      console.log('重新播放失败:', error)
+    })
   }
 }
 
 const updateVideoPlay = async () => {
-  videoRefs.value.forEach((video, index) => {
+  if (!videoRefs.value) return
+  Array.from(videoRefs.value).forEach((video, index) => {
+    if (!video) return
+    
     if (index === currentIndex.value) {
-      if (hasInteracted) {
-        video.play().catch(error => {
-          console.log('自动播放失败:', error)
-        })
-      }
+      // 初始时保持静音播放
+      video.muted = !hasInteracted
+      video.play().catch(error => {
+        console.log('自动播放失败:', error)
+      })
     } else {
       video.pause()
       video.currentTime = 0
@@ -194,7 +205,7 @@ const handleComment = (index) => {
     })
     return
   }
-  showComments.value = true
+  showCommentPanel.value = true
 }
 
 const handleShare = (index) => {
@@ -226,6 +237,8 @@ const goToProfile = () => {
 
 onMounted(() => {
   console.log('ShortVideo component mounted')
+  // 组件加载后自动播放当前视频（静音）
+  updateVideoPlay()
   document.addEventListener('click', handleUserInteraction)
   document.addEventListener('touchstart', handleUserInteraction)
 })
@@ -234,14 +247,18 @@ onUnmounted(() => {
   console.log('ShortVideo component unmounted')
   document.removeEventListener('click', handleUserInteraction)
   document.removeEventListener('touchstart', handleUserInteraction)
-  videoRefs.value.forEach(video => {
-    video.pause()
-    video.src = ''
-  })
+  if (videoRefs.value) {
+    Array.from(videoRefs.value).forEach(video => {
+      if (video) {
+        video.pause()
+        video.src = ''
+      }
+    })
+  }
 })
 
 // 格式化数字
-const formatCount = (count) => {
+const formatNumber = (count) => {
   if (count >= 10000) {
     return (count / 10000).toFixed(1) + 'w'
   } else if (count >= 1000) {
@@ -252,81 +269,41 @@ const formatCount = (count) => {
 </script>
 
 <style scoped>
-.video-container {
-  position: relative;
-  height: 100vh;
-  background-color: #000;
-  overflow: hidden;
-}
-
-.top-nav {
+.short-video-container {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 60px;
-  padding: 10px 16px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  z-index: 100;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
+  bottom: 0;
+  background: #000;
+  overflow: hidden;
 }
 
-.user-profile {
+.video-container {
   position: relative;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.user-profile:hover {
-  transform: scale(1.1);
-}
-
-.user-avatar {
+  height: 100vh;
   width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  object-fit: cover;
-}
-
-.login-status {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  background-color: #999;
-  transition: background-color 0.3s ease;
-}
-
-.login-status.logged-in {
-  background-color: #4CAF50;
-}
-
-.video-list {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.video-item {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.3s ease-out;
+  background-color: #000;
+  overflow: hidden;
+  touch-action: pan-y;
 }
 
 .video-player {
+  position: absolute;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease-out;
+}
+
+.video-player.active {
+  transform: translateY(0);
+  z-index: 1;
+}
+
+.video-player:not(.active) {
+  transform: translateY(100%);
+  z-index: 0;
 }
 
 .video-info {
@@ -339,13 +316,13 @@ const formatCount = (count) => {
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
 }
 
-.author-info {
+.user-info {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
 }
 
-.author-avatar {
+.avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -353,70 +330,118 @@ const formatCount = (count) => {
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-.author-name {
+.username {
   font-size: 16px;
   font-weight: bold;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.video-description {
+.description {
   font-size: 14px;
   line-height: 1.4;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .action-bar {
-  position: fixed;
-  right: 12px;
+  position: absolute;
+  right: 20px;
   bottom: 120px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 100;
+  gap: 20px;
+  z-index: 10;
 }
 
 .action-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 24px;
   cursor: pointer;
-  color: #fff;
+  transition: transform 0.2s;
 }
 
-.action-item .material-icons {
-  font-size: 32px;
+.action-item:hover {
+  transform: scale(1.1);
+}
+
+.action-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 4px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.action-item .count {
-  font-size: 14px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.like-icon {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
-.like-icon.liked {
-  color: #ff2c55;
+.action-icon i {
+  font-size: 24px;
+  color: #333;
+  transition: all 0.3s ease;
 }
 
-.like-animation {
-  animation: likeAnimation 0.5s ease;
+.action-icon.liked {
+  background: rgba(255, 48, 64, 0.1);
 }
 
-@keyframes likeAnimation {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.3);
-  }
+.action-icon.liked i {
+  color: #ff3040;
 }
 
-.count.liked {
-  color: #ff2c55;
+.action-count {
+  color: #fff;
+  font-size: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.user-profile {
+  position: relative;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.profile-avatar:hover {
+  transform: scale(1.1);
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ccc;
+  border: 2px solid #fff;
+}
+
+.status-indicator.online {
+  background: #4CAF50;
+}
+
+/* 添加评论面板样式 */
+:deep(.comment-panel) {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 100;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 </style> 
