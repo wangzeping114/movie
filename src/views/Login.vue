@@ -159,6 +159,13 @@ const closeDropdown = (e) => {
   }
 }
 
+// 语言切换
+const toggleLanguage = () => {
+  const currentLang = localStorage.getItem('language') || 'zh'
+  const newLang = currentLang === 'zh' ? 'en' : 'zh'
+  setLanguage(newLang)
+}
+
 onMounted(() => {
   document.addEventListener('click', closeDropdown)
 })

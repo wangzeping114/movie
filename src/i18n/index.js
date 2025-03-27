@@ -1,35 +1,15 @@
 import { createI18n } from 'vue-i18n'
-import zhCN from './locales/zh-CN'
-import zhTW from './locales/zh-TW'
-import enUS from './locales/en-US'
-import jaJP from './locales/ja-JP'
-import koKR from './locales/ko-KR'
-
-const messages = {
-  'zh-CN': zhCN,
-  'zh-TW': zhTW,
-  'en-US': enUS,
-  'ja-JP': jaJP,
-  'ko-KR': koKR
-}
-
-// 获取浏览器语言设置
-const getBrowserLanguage = () => {
-  const language = navigator.language || navigator.userLanguage
-  // 检查是否支持该语言
-  return messages[language] ? language : 'zh-CN'
-}
-
-// 获取本地存储的语言设置或使用浏览器语言
-const getStoredLanguage = () => {
-  return localStorage.getItem('language') || getBrowserLanguage()
-}
+import zh from '../locales/zh'
+import en from '../locales/en'
 
 const i18n = createI18n({
-  legacy: false, // 使用组合式API
-  locale: getStoredLanguage(),
-  fallbackLocale: 'zh-CN', // 设置回退语言
-  messages
+  legacy: false,
+  locale: localStorage.getItem('language') || 'zh', // 从本地存储获取语言设置，默认为中文
+  fallbackLocale: 'en',
+  messages: {
+    zh,
+    en
+  }
 })
 
 // 导出切换语言的方法
