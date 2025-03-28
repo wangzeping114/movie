@@ -1,5 +1,12 @@
 <template>
   <div class="short-video-container">
+    <!-- 搜索按钮移到顶部 -->
+    <div class="top-search">
+      <div class="search-btn" @click="showSearchPanel = true">
+        <i class="material-icons">search</i>
+      </div>
+    </div>
+
     <!-- 搜索面板 -->
     <SearchPanel
       v-model="showSearchPanel"
@@ -70,14 +77,6 @@
           </div>
           <span class="action-count">{{ formatNumber(videos[currentIndex].shares) }}</span>
         </div>
-
-        <!-- 搜索按钮 -->
-        <div class="action-item" @click="showSearchPanel = true">
-          <div class="action-icon">
-            <i class="material-icons">search</i>
-          </div>
-          <!-- <span class="action-count">{{ t('common.search') }}</span> -->
-        </div>
       </div>
 
       <!-- 评论面板 -->
@@ -109,6 +108,31 @@
             {{ formatTime(videos[currentIndex].currentTime) }} / {{ formatTime(videos[currentIndex].duration) }}
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 底部导航栏 -->
+    <div class="bottom-nav">
+      <div class="nav-item" :class="{ active: currentTab === 'home' }" @click="handleTabClick('home')">
+        <span class="material-icons">{{ currentTab === 'home' ? 'home' : 'home_outlined' }}</span>
+        <span class="nav-label">首页</span>
+      </div>
+      <div class="nav-item" :class="{ active: currentTab === 'friends' }" @click="handleTabClick('friends')">
+        <span class="material-icons">{{ currentTab === 'friends' ? 'people' : 'people_outline' }}</span>
+        <span class="nav-label">朋友</span>
+      </div>
+      <div class="nav-item publish-btn" @click="handlePublish">
+        <span class="material-icons">add_circle</span>
+        <!-- <span class="nav-label">发布</span> -->
+      </div>
+      <div class="nav-item" :class="{ active: currentTab === 'messages' }" @click="handleTabClick('messages')">
+        <span class="material-icons">{{ currentTab === 'messages' ? 'chat_bubble' : 'chat_bubble_outline' }}</span>
+        <span class="nav-label">消息</span>
+        <div v-if="unreadCount > 0" class="badge">{{ unreadCount }}</div>
+      </div>
+      <div class="nav-item" :class="{ active: currentTab === 'profile' }" @click="handleTabClick('profile')">
+        <span class="material-icons">{{ currentTab === 'profile' ? 'person' : 'person_outline' }}</span>
+        <span class="nav-label">我的</span>
       </div>
     </div>
   </div>
@@ -167,6 +191,10 @@ let hasInteracted = false
 const showCommentPanel = ref(false)
 const showSearchPanel = ref(false)
 const hasUserInteracted = ref(false)
+
+// 添加新的响应式变量
+const currentTab = ref('home')
+const unreadCount = ref(3) // 未读消息数量
 
 const handleTouchStart = (e) => {
   // 如果点击的是控制层或进度条，不处理触摸事件
@@ -454,6 +482,23 @@ const formatNumber = (count) => {
   }
   return count
 }
+
+// 处理标签页切换
+const handleTabClick = (tab) => {
+  currentTab.value = tab
+  if (tab === 'profile') {
+    router.push('/profile')
+  } else if (tab === 'messages') {
+    router.push('/messages')
+  } else if (tab === 'friends') {
+    router.push('/friends')
+  }
+}
+
+// 处理发布按钮点击
+const handlePublish = () => {
+  router.push('/publish')
+}
 </script>
 
 <style scoped>
@@ -464,11 +509,12 @@ const formatNumber = (count) => {
   right: 0;
   bottom: 0;
   overflow: hidden;
+  padding-bottom: 72px;
 }
 
 .video-container {
   position: relative;
-  height: 100vh;
+  height: calc(100vh - 72px);
   width: 100%;
   overflow: hidden;
   touch-action: pan-y;
@@ -594,12 +640,11 @@ const formatNumber = (count) => {
 .action-bar {
   position: fixed;
   right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   z-index: 10;
 }
 
@@ -611,8 +656,8 @@ const formatNumber = (count) => {
 }
 
 .action-icon {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -624,7 +669,7 @@ const formatNumber = (count) => {
 }
 
 .action-icon i {
-  font-size: 24px;
+  font-size: 22px;
   color: rgba(255, 255, 255, 0.9);
   transition: all 0.3s ease;
 }
@@ -651,7 +696,7 @@ const formatNumber = (count) => {
 .user-profile {
   position: relative;
   cursor: pointer;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .profile-avatar {
@@ -703,18 +748,17 @@ const formatNumber = (count) => {
 .action-bar {
   position: fixed;
   right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   z-index: 10;
 }
 
 .action-icon {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -726,7 +770,7 @@ const formatNumber = (count) => {
 }
 
 .action-icon i {
-  font-size: 24px;
+  font-size: 22px;
   color: rgba(255, 255, 255, 0.9);
   transition: all 0.3s ease;
 }
@@ -848,5 +892,255 @@ const formatNumber = (count) => {
   min-width: 100px;
   text-align: right;
   font-family: monospace;
+}
+
+/* 底部导航栏样式 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: rgba(10, 15, 26, 0.85);
+  backdrop-filter: blur(30px);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 100;
+  border-top: 1px solid rgba(212, 175, 55, 0.08);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  padding: 8px 0;
+  width: 64px;
+  height: 64px;
+  gap: 4px;
+}
+
+.nav-item .material-icons {
+  font-size: 24px;
+  transition: all 0.3s ease;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.nav-label {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  text-align: center;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.nav-item.active {
+  color: #d4af37;
+}
+
+.nav-item.active .material-icons {
+  background: linear-gradient(180deg, #d4af37 0%, #e5c158 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nav-item.active .nav-label {
+  opacity: 1;
+  color: #d4af37;
+  font-weight: 600;
+}
+
+.nav-item:hover {
+  color: #e5c158;
+  transform: translateY(-2px);
+}
+
+.nav-item:hover .material-icons {
+  transform: scale(1.1);
+}
+
+.nav-item:hover .nav-label {
+  color: #e5c158;
+  opacity: 1;
+}
+
+.publish-btn {
+  margin-top: -32px;
+  background: linear-gradient(135deg, #d4af37, #e5c158);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: #000000;
+  box-shadow: 0 8px 32px rgba(212, 175, 55, 0.4),
+              0 0 0 2px rgba(255, 255, 255, 0.1),
+              inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 2;
+  transform: translateY(0);
+}
+
+.publish-btn::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.publish-btn::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.publish-btn .material-icons {
+  font-size: 32px;
+  margin-bottom: 0;
+  background: none;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: #000000;
+  width: 32px;
+  height: 32px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.publish-btn .nav-label {
+  position: absolute;
+  bottom: -28px;
+  color: #d4af37;
+  font-weight: 600;
+  opacity: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+  width: auto;
+  margin-top: 0;
+  letter-spacing: 0.5px;
+}
+
+.publish-btn:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 40px rgba(212, 175, 55, 0.5),
+              0 0 0 2px rgba(255, 255, 255, 0.2),
+              inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.publish-btn:hover::before {
+  opacity: 1;
+}
+
+.publish-btn:hover::after {
+  opacity: 1;
+}
+
+.publish-btn:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3),
+              0 0 0 2px rgba(255, 255, 255, 0.1),
+              inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #ff4d4d, #ff6b6b);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border: 2px solid rgba(10, 15, 26, 0.8);
+  box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(255, 77, 77, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3);
+  }
+}
+
+/* 添加顶部搜索按钮样式 */
+.top-search {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 20;
+}
+
+.search-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.search-btn:hover {
+  background: rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
+}
+
+.search-btn i {
+  color: #fff;
+  font-size: 24px;
+  opacity: 0.9;
 }
 </style> 
