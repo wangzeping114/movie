@@ -596,12 +596,22 @@ const handleVideoHover = (event, isHover) => {
 <style scoped>
 .profile-container {
   min-height: 100vh;
-  background-color: #0f0f0f;
+  background: linear-gradient(135deg, #0a0f1a 0%, #1a1f2a 50%, #0a0f1a 100%);
   color: #ffffff;
+  padding-bottom: 24px;
+  position: relative;
+}
+
+.profile-container::before {
+  content: '';
   position: fixed;
-  width: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .nav-bar {
@@ -610,52 +620,54 @@ const handleVideoHover = (event, isHover) => {
   left: 0;
   right: 0;
   height: 56px;
-  background-color: rgba(15, 15, 15, 0.95);
+  background: linear-gradient(to bottom, rgba(10, 15, 26, 0.95), rgba(26, 31, 42, 0.95));
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   z-index: 100;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.05);
 }
 
 .nav-bar h1 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0;
-  background: linear-gradient(45deg, #00ff87, #60efff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #d4af37;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
 }
 
 .nav-actions {
   display: flex;
-  gap: 24px;
+  gap: 16px;
 }
 
-.nav-bar .material-icons {
+.nav-actions .material-icons {
   font-size: 24px;
+  color: #d4af37;
   cursor: pointer;
-  color: #ffffff;
-  transition: transform 0.2s;
+  transition: all 0.3s;
 }
 
-.nav-bar .material-icons:hover {
+.nav-actions .material-icons:hover {
+  color: #e5c158;
   transform: scale(1.1);
 }
 
 .user-info {
   padding: 88px 16px 24px;
   text-align: center;
-  background: linear-gradient(to bottom, rgba(15, 15, 15, 0.95), #0f0f0f);
+  background: linear-gradient(to bottom, rgba(212, 175, 55, 0.05), transparent);
+  position: relative;
+  z-index: 1;
 }
 
 .avatar-container {
   position: relative;
   width: 120px;
   height: 120px;
-  margin: 0 auto 20px;
+  margin: 0 auto 16px;
 }
 
 .avatar {
@@ -663,26 +675,34 @@ const handleVideoHover = (event, isHover) => {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #00ff87;
-  box-shadow: 0 0 20px rgba(0, 255, 135, 0.3);
+  border: 3px solid #d4af37;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+  transition: all 0.3s;
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
 }
 
 .edit-avatar {
   position: absolute;
   bottom: 0;
   right: 0;
-  background-color: #00ff87;
-  border-radius: 50%;
   width: 32px;
   height: 32px;
+  border-radius: 50%;
+  background-color: #d4af37;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s;
+  border: 2px solid #0a0f1a;
 }
 
 .edit-avatar:hover {
+  background-color: #e5c158;
   transform: scale(1.1);
 }
 
@@ -694,10 +714,9 @@ const handleVideoHover = (event, isHover) => {
 .username {
   font-size: 24px;
   font-weight: 600;
-  margin: 0 0 8px;
-  background: linear-gradient(45deg, #00ff87, #60efff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
 }
 
 .user-id {
@@ -709,27 +728,24 @@ const handleVideoHover = (event, isHover) => {
 .stats {
   display: flex;
   justify-content: center;
-  gap: 48px;
+  gap: 32px;
   margin-bottom: 24px;
 }
 
 .stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: center;
 }
 
-.count {
+.stat-value {
   font-size: 20px;
   font-weight: 600;
-  color: #00ff87;
-  text-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+  color: #d4af37;
+  margin-bottom: 4px;
 }
 
-.label {
-  font-size: 14px;
+.stat-label {
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
-  margin-top: 4px;
 }
 
 .edit-profile {
@@ -741,60 +757,48 @@ const handleVideoHover = (event, isHover) => {
   cursor: pointer;
   transition: all 0.3s;
   font-weight: 500;
-  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.2);
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background: linear-gradient(135deg, #d4af37, #e5c158);
   color: #000000;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
 }
 
 .edit-profile:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 255, 135, 0.3);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+  background: linear-gradient(135deg, #e5c158, #d4af37);
 }
 
 .tabs {
   display: flex;
-  justify-content: center;
-  gap: 48px;
-  padding: 16px;
-  background-color: rgba(15, 15, 15, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 24px;
+  padding: 0 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.05);
 }
 
 .tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: pointer;
+  padding: 12px 0;
   color: rgba(255, 255, 255, 0.6);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.3s;
   position: relative;
 }
 
 .tab.active {
-  color: #00ff87;
+  color: #d4af37;
 }
 
 .tab.active::after {
   content: '';
   position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
+  bottom: -1px;
+  left: 0;
+  right: 0;
   height: 2px;
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background-color: #d4af37;
   border-radius: 1px;
-}
-
-.tab .material-icons {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.tab-label {
-  font-size: 14px;
-  font-weight: 500;
 }
 
 .content {
@@ -805,43 +809,51 @@ const handleVideoHover = (event, isHover) => {
 
 .works-list {
   min-height: calc(100vh - 300px);
-  background-color: rgba(255, 255, 255, 0.02);
+  background: linear-gradient(135deg, rgba(26, 31, 42, 0.5), rgba(10, 15, 26, 0.5));
   border-radius: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.05);
+  position: relative;
+  z-index: 1;
 }
 
 .video-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 12px;
 }
 
 .video-item {
-  cursor: pointer;
-  transition: transform 0.3s;
-  background: rgba(255, 255, 255, 0.05);
+  position: relative;
   border-radius: 12px;
   overflow: hidden;
+  background: linear-gradient(135deg, #1a1f2a, #0a0f1a);
+  border: 1px solid rgba(212, 175, 55, 0.05);
+  transition: all 0.3s;
+  width: calc((100% - 24px) / 3);
+  aspect-ratio: 16/9;
 }
 
 .video-item:hover {
   transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
+  border-color: rgba(212, 175, 55, 0.2);
+  background: linear-gradient(135deg, #1f2435, #0a0f1a);
 }
 
 .video-wrapper {
   position: relative;
   width: 100%;
-  padding-top: 177.78%; /* 16:9 比例 */
+  height: 100%;
   overflow: hidden;
 }
 
 .video-preview {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: all 0.3s;
 }
 
 .video-overlay {
@@ -858,41 +870,45 @@ const handleVideoHover = (event, isHover) => {
   transition: opacity 0.3s;
 }
 
+.video-item:hover .video-overlay {
+  opacity: 1;
+}
+
 .video-overlay .material-icons {
   font-size: 48px;
   color: #ffffff;
 }
 
-.video-wrapper:hover .video-overlay {
-  opacity: 1;
-}
-
 .video-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   padding: 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: #ffffff;
 }
 
 .video-stats {
   display: flex;
   align-items: center;
-  gap: 4px;
-  color: rgba(255, 255, 255, 0.8);
+  gap: 8px;
+  margin-bottom: 8px;
   font-size: 14px;
-  margin-bottom: 4px;
 }
 
 .video-stats .material-icons {
   font-size: 16px;
+  color: #d4af37;
 }
 
 .video-title {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.4;
+  overflow: hidden;
 }
 
 .empty-state {
@@ -922,44 +938,54 @@ const handleVideoHover = (event, isHover) => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
-  background-color: #1a1a1a;
+  background: linear-gradient(135deg, #1a1f2a, #0a0f1a);
   border-radius: 16px;
   width: 90%;
   max-width: 400px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 24px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1001;
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.05), transparent);
+  border-radius: 16px;
+  pointer-events: none;
 }
 
 .modal-header {
-  padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .modal-header h3 {
-  margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-  background: linear-gradient(45deg, #00ff87, #60efff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffd700;
+  margin: 0;
 }
 
 .close-icon {
+  color: #ffd700;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s;
 }
 
 .close-icon:hover {
+  color: #ffed4a;
   transform: rotate(90deg);
 }
 
@@ -972,18 +998,14 @@ const handleVideoHover = (event, isHover) => {
   align-items: center;
   gap: 12px;
   padding: 16px 0;
-  cursor: pointer;
   color: #ffffff;
+  cursor: pointer;
   transition: all 0.3s;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.settings-item:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.1);
 }
 
 .settings-item:hover {
-  color: #00ff87;
+  color: #ffd700;
   transform: translateX(4px);
 }
 
@@ -1002,16 +1024,17 @@ const handleVideoHover = (event, isHover) => {
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffd700;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
   padding: 12px;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.05), rgba(212, 175, 55, 0.02));
+  border: 1px solid rgba(212, 175, 55, 0.1);
   border-radius: 8px;
   color: #ffffff;
   font-size: 14px;
@@ -1021,8 +1044,9 @@ const handleVideoHover = (event, isHover) => {
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #00ff87;
-  box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
+  border-color: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.05));
 }
 
 .form-group textarea {
@@ -1033,7 +1057,7 @@ const handleVideoHover = (event, isHover) => {
 .save-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background: linear-gradient(135deg, #d4af37, #e5c158);
   color: #000000;
   border: none;
   border-radius: 8px;
@@ -1045,7 +1069,8 @@ const handleVideoHover = (event, isHover) => {
 
 .save-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+  background: linear-gradient(135deg, #e5c158, #d4af37);
 }
 
 .save-btn:disabled {
@@ -1060,7 +1085,7 @@ const handleVideoHover = (event, isHover) => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.1);
 }
 
 .switch-group:last-child {
@@ -1084,7 +1109,7 @@ const handleVideoHover = (event, isHover) => {
 .switch {
   width: 50px;
   height: 26px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
   border-radius: 13px;
   position: relative;
   cursor: pointer;
@@ -1092,7 +1117,7 @@ const handleVideoHover = (event, isHover) => {
 }
 
 .switch.active {
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background: linear-gradient(135deg, #d4af37, #e5c158);
 }
 
 .switch-handle {
@@ -1116,24 +1141,109 @@ const handleVideoHover = (event, isHover) => {
   bottom: 24px;
   width: 56px;
   height: 56px;
-  background: linear-gradient(45deg, #00ff87, #60efff);
   border-radius: 50%;
+  background: linear-gradient(135deg, #d4af37, #e5c158);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3);
   transition: all 0.3s;
-  z-index: 100;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+  z-index: 90;
 }
 
 .publish-fab:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(0, 255, 135, 0.4);
+  box-shadow: 0 6px 25px rgba(212, 175, 55, 0.4);
+  background: linear-gradient(135deg, #e5c158, #d4af37);
 }
 
 .publish-fab .material-icons {
   font-size: 32px;
   color: #000000;
+}
+
+/* 添加滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0f1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ffed4a;
+}
+
+/* 头像上传区域样式 */
+.avatar-upload {
+  padding: 20px;
+}
+
+.preview-container {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #d4af37;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+  border: 2px dashed #d4af37;
+  border-radius: 8px;
+  color: #d4af37;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-btn:hover {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.08));
+  transform: translateY(-2px);
+}
+
+.upload-btn .material-icons {
+  font-size: 24px;
+}
+
+@media (max-width: 768px) {
+  .video-item {
+    width: calc((100% - 12px) / 2);
+  }
+}
+
+@media (max-width: 480px) {
+  .video-item {
+    width: 100%;
+  }
 }
 </style> 
