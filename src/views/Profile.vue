@@ -4,7 +4,9 @@
     <div class="nav-bar">
       <span class="material-icons back-icon" @click="router.back()">arrow_back</span>
       <h1>个人主页</h1>
-      <span class="material-icons settings-icon" @click="showSettings = true">settings</span>
+      <div class="nav-actions">
+        <span class="material-icons settings-icon" @click="showSettings = true">settings</span>
+      </div>
     </div>
 
     <!-- 用户信息区域 -->
@@ -58,23 +60,30 @@
           <span class="material-icons">videocam_off</span>
           <p>还没有发布作品</p>
         </div>
-        <div v-else class="video-list" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+        <div v-else class="video-grid">
           <div v-for="(video, index) in works" 
                :key="index" 
                class="video-item"
-               :style="{ transform: 'translateY(' + (currentIndex === index ? '0' : (index < currentIndex ? '-100%' : '100%')) + ')' }">
-            <video
-              :ref="el => setVideoRef(el, index)"
-              :src="video.url"
-              class="video-player"
-              loop
-              muted
-              @click="togglePlay(index)"
-              @ended="handleVideoEnd(index)"
-            ></video>
+               @click="handleVideoClick(video)">
+            <div class="video-wrapper">
+              <video
+                :src="video.url"
+                class="video-preview"
+                loop
+                muted
+                @mouseenter="handleVideoHover($event, true)"
+                @mouseleave="handleVideoHover($event, false)"
+              ></video>
+              <div class="video-overlay">
+                <span class="material-icons">play_circle</span>
+              </div>
+            </div>
             <div class="video-info">
-              <span class="material-icons">favorite</span>
-              <span>{{ formatCount(video.likes) }}</span>
+              <div class="video-stats">
+                <span class="material-icons">favorite</span>
+                <span>{{ formatCount(video.likes) }}</span>
+              </div>
+              <div class="video-title">{{ video.description }}</div>
             </div>
           </div>
         </div>
@@ -87,15 +96,38 @@
           <p>还没有喜欢的视频</p>
         </div>
         <div v-else class="video-grid">
-          <div v-for="video in likedVideos" :key="video.id" class="video-item">
-            <video :src="video.url" class="video-preview"></video>
+          <div v-for="video in likedVideos" 
+               :key="video.id" 
+               class="video-item"
+               @click="handleVideoClick(video)">
+            <div class="video-wrapper">
+              <video
+                :src="video.url"
+                class="video-preview"
+                loop
+                muted
+                @mouseenter="handleVideoHover($event, true)"
+                @mouseleave="handleVideoHover($event, false)"
+              ></video>
+              <div class="video-overlay">
+                <span class="material-icons">play_circle</span>
+              </div>
+            </div>
             <div class="video-info">
-              <span class="material-icons">favorite</span>
-              <span>{{ formatCount(video.likes) }}</span>
+              <div class="video-stats">
+                <span class="material-icons">favorite</span>
+                <span>{{ formatCount(video.likes) }}</span>
+              </div>
+              <div class="video-title">{{ video.description }}</div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 发布按钮 -->
+    <div class="publish-fab" @click="handlePublish">
+      <span class="material-icons">add</span>
     </div>
 
     <!-- 设置弹窗 -->
@@ -192,14 +224,6 @@
             <input v-model="accountForm.newPassword" type="password" placeholder="新密码">
             <input v-model="accountForm.confirmPassword" type="password" placeholder="确认新密码">
           </div>
-          <div class="form-group">
-            <label>绑定手机</label>
-            <div class="phone-input">
-              <input v-model="accountForm.phone" type="tel" placeholder="请输入手机号">
-              <button class="verify-btn" @click="sendVerifyCode">获取验证码</button>
-            </div>
-            <input v-model="accountForm.verifyCode" type="text" placeholder="请输入验证码">
-          </div>
           <button class="save-btn" @click="saveAccountSettings">保存修改</button>
         </div>
       </div>
@@ -251,16 +275,8 @@
         <div class="settings-form">
           <div class="switch-group">
             <label>
-              <span>新关注通知</span>
-              <div class="switch" :class="{ active: notificationForm.followNotify }" @click="notificationForm.followNotify = !notificationForm.followNotify">
-                <div class="switch-handle"></div>
-              </div>
-            </label>
-          </div>
-          <div class="switch-group">
-            <label>
               <span>点赞通知</span>
-              <div class="switch" :class="{ active: notificationForm.likeNotify }" @click="notificationForm.likeNotify = !notificationForm.likeNotify">
+              <div class="switch" :class="{ active: notificationForm.likes }" @click="notificationForm.likes = !notificationForm.likes">
                 <div class="switch-handle"></div>
               </div>
             </label>
@@ -268,7 +284,15 @@
           <div class="switch-group">
             <label>
               <span>评论通知</span>
-              <div class="switch" :class="{ active: notificationForm.commentNotify }" @click="notificationForm.commentNotify = !notificationForm.commentNotify">
+              <div class="switch" :class="{ active: notificationForm.comments }" @click="notificationForm.comments = !notificationForm.comments">
+                <div class="switch-handle"></div>
+              </div>
+            </label>
+          </div>
+          <div class="switch-group">
+            <label>
+              <span>关注通知</span>
+              <div class="switch" :class="{ active: notificationForm.follows }" @click="notificationForm.follows = !notificationForm.follows">
                 <div class="switch-handle"></div>
               </div>
             </label>
@@ -371,21 +395,19 @@ const showNotificationSettings = ref(false)
 const accountForm = reactive({
   oldPassword: '',
   newPassword: '',
-  confirmPassword: '',
-  phone: '',
-  verifyCode: ''
+  confirmPassword: ''
 })
 
 const privacyForm = reactive({
   isPrivate: false,
   allowComments: true,
-  allowDownload: true
+  allowDownload: false
 })
 
 const notificationForm = reactive({
-  followNotify: true,
-  likeNotify: true,
-  commentNotify: true
+  likes: true,
+  comments: true,
+  follows: true
 })
 
 // 格式化数字
@@ -481,16 +503,6 @@ const handleNotificationSettings = () => {
   showNotificationSettings.value = true
 }
 
-// 发送验证码
-const sendVerifyCode = () => {
-  if (!accountForm.phone) {
-    alert('请输入手机号')
-    return
-  }
-  // 这里应该调用后端API发送验证码
-  alert('验证码已发送')
-}
-
 // 保存账号设置
 const saveAccountSettings = () => {
   if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmPassword) {
@@ -557,12 +569,39 @@ const togglePlay = (index) => {
 const handleVideoEnd = (index) => {
   // Implement video end logic here
 }
+
+// 添加发布视频处理函数
+const handlePublish = () => {
+  router.push('/publish')
+}
+
+// 处理视频点击
+const handleVideoClick = (video) => {
+  // 这里可以添加视频点击后的处理逻辑，比如跳转到视频详情页
+  console.log('Video clicked:', video)
+}
+
+// 处理视频悬停
+const handleVideoHover = (event, isHover) => {
+  const video = event.target
+  if (isHover) {
+    video.play()
+  } else {
+    video.pause()
+    video.currentTime = 0
+  }
+}
 </script>
 
 <style scoped>
 .profile-container {
   min-height: 100vh;
-  background-color: #fff;
+  background-color: #0f0f0f;
+  color: #ffffff;
+  position: fixed;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .nav-bar {
@@ -571,83 +610,107 @@ const handleVideoEnd = (index) => {
   left: 0;
   right: 0;
   height: 56px;
-  background-color: #fff;
+  background-color: rgba(15, 15, 15, 0.95);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .nav-bar h1 {
   font-size: 18px;
   font-weight: 600;
+  margin: 0;
+  background: linear-gradient(45deg, #00ff87, #60efff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.back-icon,
-.settings-icon {
+.nav-actions {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-bar .material-icons {
   font-size: 24px;
-  color: #333;
   cursor: pointer;
+  color: #ffffff;
+  transition: transform 0.2s;
+}
+
+.nav-bar .material-icons:hover {
+  transform: scale(1.1);
 }
 
 .user-info {
-  padding: 76px 16px 20px;
+  padding: 88px 16px 24px;
   text-align: center;
-  background-color: #fff;
+  background: linear-gradient(to bottom, rgba(15, 15, 15, 0.95), #0f0f0f);
 }
 
 .avatar-container {
   position: relative;
-  display: inline-block;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
 }
 
 .avatar {
-  width: 96px;
-  height: 96px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  object-fit: cover;
+  border: 3px solid #00ff87;
+  box-shadow: 0 0 20px rgba(0, 255, 135, 0.3);
 }
 
 .edit-avatar {
   position: absolute;
-  right: 0;
   bottom: 0;
+  right: 0;
+  background-color: #00ff87;
+  border-radius: 50%;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.edit-avatar:hover {
+  transform: scale(1.1);
 }
 
 .edit-avatar .material-icons {
-  font-size: 20px;
-  color: #666;
+  font-size: 18px;
+  color: #000000;
 }
 
 .username {
-  margin-top: 12px;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
+  margin: 0 0 8px;
+  background: linear-gradient(45deg, #00ff87, #60efff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .user-id {
-  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 24px;
   font-size: 14px;
-  color: #999;
 }
 
 .stats {
   display: flex;
   justify-content: center;
   gap: 48px;
-  margin-top: 20px;
+  margin-bottom: 24px;
 }
 
 .stat-item {
@@ -656,107 +719,195 @@ const handleVideoEnd = (index) => {
   align-items: center;
 }
 
-.stat-item .count {
-  font-size: 18px;
+.count {
+  font-size: 20px;
   font-weight: 600;
+  color: #00ff87;
+  text-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
 }
 
-.stat-item .label {
+.label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
   margin-top: 4px;
-  font-size: 12px;
-  color: #999;
 }
 
 .edit-profile {
-  margin-top: 20px;
-  display: inline-block;
-  padding: 8px 24px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #333;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 24px;
   cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.2);
+  background: linear-gradient(45deg, #00ff87, #60efff);
+  color: #000000;
+}
+
+.edit-profile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 255, 135, 0.3);
 }
 
 .tabs {
   display: flex;
-  border-top: 1px solid #f0f0f0;
-  background-color: #fff;
+  justify-content: center;
+  gap: 48px;
+  padding: 16px;
+  background-color: rgba(15, 15, 15, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .tab {
-  flex: 1;
-  height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   cursor: pointer;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.3s;
+  position: relative;
 }
 
 .tab.active {
-  color: #333;
+  color: #00ff87;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: linear-gradient(45deg, #00ff87, #60efff);
+  border-radius: 1px;
 }
 
 .tab .material-icons {
   font-size: 24px;
+  margin-bottom: 4px;
 }
 
 .tab-label {
-  margin-top: 2px;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .content {
-  min-height: calc(100vh - 56px - 44px);
-  background-color: #f8f8f8;
-  padding: 12px;
+  padding: 16px;
+  position: relative;
+  z-index: 1;
 }
 
-.empty-state {
-  padding: 40px 0;
-  text-align: center;
-  color: #999;
-}
-
-.empty-state .material-icons {
-  font-size: 48px;
-  margin-bottom: 12px;
+.works-list {
+  min-height: calc(100vh - 300px);
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
 }
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 12px;
 }
 
 .video-item {
+  cursor: pointer;
+  transition: transform 0.3s;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.video-item:hover {
+  transform: translateY(-4px);
+}
+
+.video-wrapper {
   position: relative;
-  aspect-ratio: 9/16;
-  background-color: #eee;
+  width: 100%;
+  padding-top: 177.78%; /* 16:9 比例 */
   overflow: hidden;
 }
 
 .video-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.video-info {
+.video-overlay {
   position: absolute;
-  bottom: 8px;
-  left: 8px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.video-overlay .material-icons {
+  font-size: 48px;
+  color: #ffffff;
+}
+
+.video-wrapper:hover .video-overlay {
+  opacity: 1;
+}
+
+.video-info {
+  padding: 12px;
+}
+
+.video-stats {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 
-.video-info .material-icons {
+.video-stats .material-icons {
   font-size: 16px;
+}
+
+.video-title {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.empty-state .material-icons {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .settings-modal {
@@ -765,79 +916,83 @@ const handleVideoEnd = (index) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
   z-index: 1000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
-  width: 100%;
-  background-color: #fff;
-  border-radius: 12px 12px 0 0;
-  overflow: hidden;
+  background-color: #1a1a1a;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
-  padding: 16px;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #f0f0f0;
 }
 
 .modal-header h3 {
-  font-size: 16px;
+  margin: 0;
+  font-size: 18px;
   font-weight: 600;
+  background: linear-gradient(45deg, #00ff87, #60efff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .close-icon {
-  font-size: 24px;
-  color: #666;
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.close-icon:hover {
+  transform: rotate(90deg);
 }
 
 .settings-list {
-  padding: 8px 0;
+  padding: 20px;
 }
 
 .settings-item {
-  height: 56px;
-  padding: 0 16px;
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 16px 0;
   cursor: pointer;
+  color: #ffffff;
+  transition: all 0.3s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.settings-item:active {
-  background-color: #f8f8f8;
+.settings-item:last-child {
+  border-bottom: none;
 }
 
-.settings-item .material-icons {
-  font-size: 24px;
-  color: #666;
-}
-
-.settings-item span:last-child {
-  font-size: 16px;
-  color: #333;
+.settings-item:hover {
+  color: #00ff87;
+  transform: translateX(4px);
 }
 
 .settings-item.logout {
-  color: #ff2c55;
+  color: #ff4d4d;
 }
 
-.settings-item.logout .material-icons {
-  color: #ff2c55;
-}
-
-.settings-item.logout span:last-child {
-  color: #ff2c55;
-}
-
-.edit-form {
-  padding: 20px;
+.settings-item.logout:hover {
+  color: #ff3333;
 }
 
 .form-group {
@@ -847,7 +1002,7 @@ const handleVideoEnd = (index) => {
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
 }
 
@@ -855,9 +1010,19 @@ const handleVideoEnd = (index) => {
 .form-group textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #ddd;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  color: #ffffff;
   font-size: 14px;
+  transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #00ff87;
+  box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
 }
 
 .form-group textarea {
@@ -868,145 +1033,107 @@ const handleVideoEnd = (index) => {
 .save-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(45deg, #00ff87, #60efff);
+  color: #000000;
   border: none;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s;
+}
+
+.save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3);
 }
 
 .save-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.avatar-upload {
-  padding: 20px;
-  text-align: center;
-}
-
-.preview-container {
-  width: 200px;
-  height: 200px;
-  margin: 0 auto 20px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid #ddd;
-}
-
-.avatar-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.upload-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.upload-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background-color: #f5f5f5;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.upload-btn:hover {
-  background-color: #eee;
-}
-
-.upload-btn .material-icons {
-  font-size: 20px;
-}
-
-.settings-form {
-  padding: 20px;
-}
-
-.phone-input {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.verify-btn {
-  padding: 0 16px;
-  background-color: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
+  transform: none;
+  box-shadow: none;
 }
 
 .switch-group {
-  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.switch-group:last-child {
+  border-bottom: none;
 }
 
 .switch-group label {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 12px;
+  cursor: pointer;
+  color: #ffffff;
 }
 
-.switch-group .description {
+.description {
   font-size: 12px;
-  color: #999;
-  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 4px 0 0;
 }
 
 .switch {
-  width: 51px;
-  height: 31px;
-  background-color: #ddd;
-  border-radius: 31px;
-  padding: 3px;
+  width: 50px;
+  height: 26px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  position: relative;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
 }
 
 .switch.active {
-  background-color: #4CAF50;
+  background: linear-gradient(45deg, #00ff87, #60efff);
 }
 
 .switch-handle {
-  width: 25px;
-  height: 25px;
-  background-color: white;
+  width: 22px;
+  height: 22px;
+  background-color: #ffffff;
   border-radius: 50%;
-  transition: transform 0.3s;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .switch.active .switch-handle {
-  transform: translateX(20px);
+  transform: translateX(24px);
 }
 
-.video-list {
+.publish-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(45deg, #00ff87, #60efff);
+  border-radius: 50%;
   display: flex;
-  overflow: hidden;
-  height: 100%;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3);
+  transition: all 0.3s;
+  z-index: 100;
 }
 
-.video-item {
-  flex: 0 0 100%;
-  transform: translateX(0%);
-  transition: transform 0.5s ease;
+.publish-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 255, 135, 0.4);
 }
 
-.video-player {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.publish-fab .material-icons {
+  font-size: 32px;
+  color: #000000;
 }
 </style> 

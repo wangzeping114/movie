@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ShortVideo from '../views/ShortVideo.vue'
 import Login from '../views/Login.vue'
 import Profile from '../views/Profile.vue'
+import Publish from '../views/Publish.vue'
 
 const routes = [
   {
@@ -23,6 +24,12 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: Profile,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/publish',
+    name: 'Publish',
+    component: Publish,
     meta: { requiresAuth: true }
   }
 ]
