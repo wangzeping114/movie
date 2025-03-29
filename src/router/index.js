@@ -6,6 +6,8 @@ import Publish from '../views/Publish.vue'
 import Messages from '../views/Messages.vue'
 import Live from '../views/Live.vue'
 import LiveView from '../views/LiveView.vue'
+import HomeView from '../views/HomeView.vue'
+import ChatView from '../views/ChatView.vue'
 
 const routes = [
   {
@@ -55,6 +57,16 @@ const routes = [
     path: '/live/:id',
     name: 'LiveView',
     component: LiveView
+  },
+  {
+    path: '/home',
+    name: 'home',
+    component: HomeView
+  },
+  {
+    path: '/chat/:id',
+    name: 'chat',
+    component: ChatView
   }
 ]
 

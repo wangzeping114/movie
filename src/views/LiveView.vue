@@ -86,9 +86,25 @@
         
         <!-- 聊天消息 -->
         <div class="chat-messages">
-          <div v-for="(message, index) in messages" :key="index" class="chat-message">
-            <div class="message-sender">{{ message.sender }}</div>
-            <div class="message-content">{{ message.content }}</div>
+          <div 
+            v-for="(message, index) in messages" 
+            :key="index" 
+            class="chat-message"
+            @click="enterChat(message)"
+          >
+            <div class="message-avatar">
+              <img :src="message.avatar" :alt="message.username">
+            </div>
+            <div class="message-content">
+              <div class="message-header">
+                <span class="message-username">{{ message.username }}</span>
+                <span class="message-time">{{ message.time }}</span>
+              </div>
+              <div class="message-text">{{ message.text }}</div>
+            </div>
+            <div class="message-enter">
+              <i class="material-icons">chevron_right</i>
+            </div>
           </div>
         </div>
         
@@ -383,6 +399,15 @@ const toggleGiftDisplayMode = () => {
   giftDisplayMode.value = giftDisplayMode.value === 'chat' ? 'video' : 'chat'
 }
 
+// 进入聊天页面
+const enterChat = (message) => {
+  router.push({
+    name: 'chat',
+    params: { id: message.username },
+    state: { message }
+  })
+}
+
 onMounted(() => {
   loadLiveStream()
   addRandomMessages()
@@ -588,26 +613,107 @@ onUnmounted(() => {
 }
 
 .chat-message {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 8px 12px;
-  animation: fadeIn 0.3s ease;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.chat-message:hover {
+  background: rgba(0, 0, 0, 0.4);
+  transform: translateX(5px);
 }
 
-.message-sender {
-  font-weight: 600;
-  font-size: 12px;
-  color: #d4af37;
-  margin-bottom: 4px;
+.chat-message::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, #d4af37, transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.chat-message:hover::before {
+  opacity: 1;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 12px;
+  border: 2px solid #d4af37;
+  flex-shrink: 0;
+}
+
+.message-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .message-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.message-username {
+  font-weight: 600;
+  color: #fff;
+  margin-right: 8px;
   font-size: 14px;
+}
+
+.message-time {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.message-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.message-enter {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.chat-message:hover .message-enter {
+  color: #d4af37;
+  transform: translateX(3px);
+}
+
+.message-enter i {
+  font-size: 20px;
 }
 
 .chat-input {
