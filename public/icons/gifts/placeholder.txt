@@ -1,0 +1,34 @@
+请在此目录下添加以下礼物图标文件：
+
+1. 鲜花类礼物：
+   - rose.png - 玫瑰花
+   - tulip.png - 郁金香
+   - sunflower.png - 向日葵
+   - bouquet.png - 花束
+
+2. 生活类礼物：
+   - lollipop.png - 棒棒糖
+   - cake.png - 蛋糕
+   - icecream.png - 冰淇淋
+   - beer.png - 啤酒
+
+3. 高级礼物：
+   - heart.png - 爱心
+   - crown.png - 皇冠
+   - car.png - 跑车
+   - rocket.png - 火箭
+
+4. 饮酒类礼物：
+   - beers.png - 啤酒干杯
+   - wine.png - 红酒
+   - whiskey.png - 洋酒
+   - bar.png - 酒吧套餐
+
+推荐图标尺寸：128x128像素或64x64像素，PNG格式透明背景。
+
+您可以从以下网站获取免费图标：
+- Flaticon (https://www.flaticon.com/)
+- Icons8 (https://icons8.com/)
+- Freepik (https://www.freepik.com/)
+
+注意：请确保您使用的图标拥有合适的使用许可。 

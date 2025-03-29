@@ -17,6 +17,7 @@
         <video 
           ref="videoPlayer" 
           autoplay 
+          muted
           class="live-video"
           @click="toggleControls"
         ></video>
@@ -25,6 +26,11 @@
         <div class="loading-indicator" v-if="isLoading">
           <div class="spinner"></div>
           <div>正在加载直播...</div>
+        </div>
+        
+        <!-- 播放按钮 -->
+        <div class="play-button" v-if="showPlayButton" @click.stop="playVideo">
+          <i class="material-icons">play_arrow</i>
         </div>
         
         <!-- 主播信息 -->
@@ -38,10 +44,47 @@
             {{ isFollowed ? '已关注' : '关注' }}
           </button>
         </div>
+        
+        <!-- 视频控制 -->
+        <div class="video-controls" v-if="showControls">
+          <div class="control-button mute-button" @click.stop="toggleMute">
+            <i class="material-icons">{{ isMuted ? 'volume_off' : 'volume_up' }}</i>
+          </div>
+          
+          <!-- 礼物特效控制按钮 -->
+          <div class="control-button gift-effect-button" @click.stop="toggleGiftEffects" :title="showPremiumEffects ? '关闭豪华礼物特效' : '开启豪华礼物特效'">
+            <i class="material-icons">{{ showPremiumEffects ? 'visibility' : 'visibility_off' }}</i>
+          </div>
+          
+          <!-- 礼物位置控制按钮 -->
+          <div class="control-button gift-position-button" @click.stop="toggleGiftDisplayMode" :title="giftDisplayMode === 'chat' ? '在视频上显示礼物' : '在聊天区显示礼物'">
+            <i class="material-icons">{{ giftDisplayMode === 'chat' ? 'chat' : 'videocam' }}</i>
+          </div>
+        </div>
+        
+        <!-- 视频模式下的礼物动画区域 -->
+        <LiveGiftAnimation 
+          v-if="giftDisplayMode === 'video'"
+          :gifts="giftAnimations" 
+          :max-visible="3"
+          :show-premium-effects="showPremiumEffects"
+          :chat-mode="false"
+        />
       </div>
       
       <!-- 聊天区域 -->
       <div class="chat-container">
+        <!-- 聊天模式下的礼物动画区域 -->
+        <div class="chat-gift-container" v-if="giftDisplayMode === 'chat'">
+          <LiveGiftAnimation 
+            :gifts="giftAnimations" 
+            :max-visible="3"
+            :show-premium-effects="showPremiumEffects"
+            :chat-mode="true"
+          />
+        </div>
+        
+        <!-- 聊天消息 -->
         <div class="chat-messages">
           <div v-for="(message, index) in messages" :key="index" class="chat-message">
             <div class="message-sender">{{ message.sender }}</div>
@@ -57,18 +100,31 @@
             placeholder="发送消息..." 
             @keyup.enter="sendMessage"
           >
-          <button @click="sendMessage">
+          <button class="send-btn" @click="sendMessage">
             <i class="material-icons">send</i>
+          </button>
+          <button class="gift-btn" @click="showGiftPanel = true">
+            <i class="material-icons">card_giftcard</i>
           </button>
         </div>
       </div>
     </div>
+    
+    <!-- 礼物面板 -->
+    <LiveGiftPanel 
+      :show="showGiftPanel" 
+      :user-balance="userBalance"
+      @close="showGiftPanel = false"
+      @send-gift="handleSendGift"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import LiveGiftPanel from '../components/LiveGiftPanel.vue'
+import LiveGiftAnimation from '../components/LiveGiftAnimation.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -142,22 +198,63 @@ const toggleControls = () => {
 const loadLiveStream = () => {
   isLoading.value = true
   
-  // 模拟加载过程，实际项目中这里会连接到直播流
+  // 模拟加载过程
   setTimeout(() => {
     isLoading.value = false
     
-    // 模拟直播视频，真实场景需要连接到流媒体服务
+    // 设置直播视频源
     if (videoPlayer.value) {
-      // 在实际项目中，这里会设置直播流的URL
-      // videoPlayer.value.src = 'https://your-live-stream-url'
+      // 实际项目中这里会连接到真实的直播流
+      // 使用本地示例视频或公共视频作为演示
+      const sampleVideoUrls = [
+        '/videos/sample-live1.mp4',
+        '/videos/sample-live2.mp4',
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4'
+      ]
       
-      // 这里使用示例视频代替直播流
-      videoPlayer.value.src = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+      // 随机选择一个视频
+      const randomVideoUrl = sampleVideoUrls[Math.floor(Math.random() * sampleVideoUrls.length)]
+      videoPlayer.value.src = randomVideoUrl
+      
+      // 循环播放
+      videoPlayer.value.loop = true
+      
+      // 自动播放
       videoPlayer.value.play().catch(error => {
         console.error('自动播放失败:', error)
+        // 显示播放按钮
+        showPlayButton.value = true
       })
     }
-  }, 2000)
+  }, 1500)
+}
+
+// 添加播放控制状态
+const showPlayButton = ref(false)
+const isMuted = ref(true) // 默认静音
+
+// 手动播放视频
+const playVideo = () => {
+  if (videoPlayer.value) {
+    videoPlayer.value.play()
+    .then(() => {
+      showPlayButton.value = false
+    })
+    .catch(error => {
+      console.error('播放失败:', error)
+    })
+  }
+}
+
+// 静音切换
+const toggleMute = () => {
+  if (videoPlayer.value) {
+    videoPlayer.value.muted = !videoPlayer.value.muted
+    isMuted.value = videoPlayer.value.muted
+  }
 }
 
 // 添加随机消息来模拟聊天活跃度
@@ -187,9 +284,109 @@ const addRandomMessages = () => {
   }, 5000)
 }
 
+// 礼物相关
+const showGiftPanel = ref(false)
+const userBalance = ref(10000) // 用户余额
+const giftAnimations = ref([]) // 礼物动画队列
+
+// 处理发送礼物
+const handleSendGift = (giftData) => {
+  // 扣除用户余额
+  userBalance.value -= giftData.totalPrice
+  
+  // 添加消息到聊天区域
+  messages.value.push({
+    sender: '我',
+    content: `送出了 ${giftData.count} 个 ${giftData.gift.name}`
+  })
+  
+  // 添加礼物到动画队列
+  const gift = {
+    ...giftData.gift,
+    count: giftData.count,
+    senderName: '我',
+    senderAvatar: 'https://randomuser.me/api/portraits/lego/1.jpg', // 默认用户头像
+  }
+  
+  giftAnimations.value = [...giftAnimations.value, gift]
+  
+  // 自动滚动聊天区域到底部
+  setTimeout(() => {
+    const chatMessages = document.querySelector('.chat-messages')
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight
+    }
+  }, 50)
+}
+
+// 模拟其他用户发送礼物
+const simulateGifts = () => {
+  const randomGifts = [
+    { id: 1, name: '玫瑰花', price: 5, icon: 'https://cdn-icons-png.flaticon.com/128/3082/3082059.png', animation: 'simple' },
+    { id: 2, name: '啤酒', price: 10, icon: 'https://cdn-icons-png.flaticon.com/128/2738/2738730.png', animation: 'simple' },
+    { id: 9, name: '爱心', price: 99, icon: 'https://cdn-icons-png.flaticon.com/128/4381/4381470.png', animation: 'medium' },
+    { id: 11, name: '跑车', price: 520, icon: 'https://cdn-icons-png.flaticon.com/128/185/185277.png', animation: 'advanced' }
+  ]
+  
+  const randomUsers = [
+    { name: '粉丝1', avatar: 'https://randomuser.me/api/portraits/women/11.jpg' },
+    { name: '粉丝2', avatar: 'https://randomuser.me/api/portraits/men/12.jpg' },
+    { name: '粉丝3', avatar: 'https://randomuser.me/api/portraits/women/13.jpg' },
+    { name: '粉丝4', avatar: 'https://randomuser.me/api/portraits/men/14.jpg' }
+  ]
+  
+  setInterval(() => {
+    // 随机选择一个礼物和用户
+    const randomGift = randomGifts[Math.floor(Math.random() * randomGifts.length)]
+    const randomUser = randomUsers[Math.floor(Math.random() * randomUsers.length)]
+    const giftCount = Math.floor(Math.random() * 10) + 1 // 随机数量1-10
+    
+    // 添加消息到聊天区域
+    messages.value.push({
+      sender: randomUser.name,
+      content: `送出了 ${giftCount} 个 ${randomGift.name}`
+    })
+    
+    // 添加礼物到动画队列
+    const gift = {
+      ...randomGift,
+      count: giftCount,
+      senderName: randomUser.name,
+      senderAvatar: randomUser.avatar
+    }
+    
+    giftAnimations.value = [...giftAnimations.value, gift]
+    
+    // 自动滚动到底部
+    setTimeout(() => {
+      const chatMessages = document.querySelector('.chat-messages')
+      if (chatMessages) {
+        chatMessages.scrollTop = chatMessages.scrollHeight
+      }
+    }, 50)
+  }, 10000) // 每10秒随机发送一个礼物
+}
+
+// 添加礼物特效控制
+const showPremiumEffects = ref(true)
+
+// 切换礼物特效显示
+const toggleGiftEffects = () => {
+  showPremiumEffects.value = !showPremiumEffects.value
+}
+
+// 添加礼物显示位置控制
+const giftDisplayMode = ref('chat') // 'chat' 或 'video'
+
+// 切换礼物显示位置
+const toggleGiftDisplayMode = () => {
+  giftDisplayMode.value = giftDisplayMode.value === 'chat' ? 'video' : 'chat'
+}
+
 onMounted(() => {
   loadLiveStream()
   addRandomMessages()
+  simulateGifts() // 添加模拟礼物发送
   
   // 自动滚动到底部
   const chatMessages = document.querySelector('.chat-messages')
@@ -374,6 +571,13 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+.chat-gift-container {
+  position: relative;
+  width: 100%;
+  min-height: 60px;
+  margin-bottom: 10px;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -408,17 +612,20 @@ onUnmounted(() => {
 
 .chat-input {
   display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(26, 26, 26, 0.8);
 }
 
 .chat-input input {
   flex: 1;
-  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 20px;
-  color: #fff;
+  color: #ffffff;
+  padding: 8px 16px;
   font-size: 14px;
 }
 
@@ -428,26 +635,33 @@ onUnmounted(() => {
 }
 
 .chat-input button {
-  background: #d4af37;
-  border: none;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  margin-left: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
+}
+
+.chat-input .send-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.chat-input .gift-btn {
+  background: linear-gradient(135deg, #d4af37, #e5c158);
+  color: #000;
 }
 
 .chat-input button:hover {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
 .chat-input button i {
-  color: #000;
-  font-size: 18px;
+  font-size: 20px;
 }
 
 /* 响应式布局 */
@@ -465,5 +679,75 @@ onUnmounted(() => {
     width: 30%;
     height: 100%;
   }
+}
+
+.play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.play-button i {
+  font-size: 48px;
+  color: #d4af37;
+}
+
+.play-button:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.video-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 16px;
+  z-index: 10;
+}
+
+.control-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.control-button:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.control-button i {
+  color: #fff;
+  font-size: 20px;
+}
+
+.gift-effect-button i {
+  color: #d4af37;
+}
+
+.mute-button.active i {
+  color: #d4af37;
+}
+
+.gift-position-button i {
+  color: #42b983;
 }
 </style> 

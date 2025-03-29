@@ -744,50 +744,72 @@ const handleVideoHover = (event, isHover) => {
 }
 
 .video-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 20px;
+  width: 100%;
 }
 
 .video-item {
   position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 横屏比例 */
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a1f2a, #0a0f1a);
-  border: 1px solid rgba(212, 175, 55, 0.05);
-  transition: all 0.3s;
-  width: calc((100% - 24px) / 3);
-  aspect-ratio: 16/9;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .video-item:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
-  border-color: rgba(212, 175, 55, 0.2);
-  background: linear-gradient(135deg, #1f2435, #0a0f1a);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.video-preview {
+.video-item video {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: all 0.3s;
+  border-radius: 12px;
 }
 
-.video-info {
+.video-item .video-info {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   padding: 12px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-  color: #ffffff;
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.view-count {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
+.video-item .video-info i {
+  font-size: 16px;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .video-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .video-grid {
+    grid-template-columns: repeat(1, 1fr);
+    gap: 16px;
+    padding: 12px;
+  }
 }
 
 .empty-state {

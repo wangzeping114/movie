@@ -1,0 +1,23 @@
+请在此目录下添加以下视频文件以支持直播功能：
+
+1. sample-live1.mp4 - 直播示例视频1
+2. sample-live2.mp4 - 直播示例视频2
+
+您可以使用任何适合的MP4格式视频文件，并将其重命名为上述名称。
+
+推荐视频规格：
+- 分辨率：720p或1080p
+- 格式：MP4 (H.264编码)
+- 时长：30秒至3分钟
+- 内容：适合展示在直播间的内容
+
+如果没有本地视频文件，应用将使用以下在线示例视频：
+- https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4
+- https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4
+- https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4
+- https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4
+
+注意：
+- 确保您使用的视频拥有合适的使用许可
+- 较大的视频文件可能会影响应用加载速度
+- 视频将会循环播放 
