@@ -33,25 +33,47 @@
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
+      :class="{ 'landscape-mode': isLandscape }"
     >
       <video
         v-for="(video, index) in videos"
         :key="video.id"
         :src="video.url"
         class="video-player"
-        :class="{ active: currentIndex === index }"
-        preload="auto"
-        muted
+        :class="{ 
+          'active': currentIndex === index, 
+          'widescreen-player': video.isWidescreen && !isFullscreen,
+          'landscape': isLandscape 
+        }"
+        preload="metadata"
+        playsinline
+        webkit-playsinline
+        x5-playsinline
+        x5-video-player-type="h5"
+        x5-video-player-fullscreen="true"
+        x5-video-orientation="portrait"
+        :muted="video.isMuted"
         ref="videoRefs"
         @ended="handleVideoEnd"
         @timeupdate="handleTimeUpdate(index)"
         @loadedmetadata="handleVideoLoaded(index)"
+        @loadeddata="checkVideoAspectRatio(index)"
         @click="togglePlay"
+        :poster="video.poster"
       ></video>
+      
+      <!-- 调试信息 -->
+      <div class="debug-info" v-if="showDebug">
+        <p>视频宽高比: {{ videos[currentIndex].aspectRatio?.toFixed(2) }}</p>
+        <p>是否宽屏: {{ videos[currentIndex].isWidescreen ? '是' : '否' }}</p>
+        <p>全屏模式: {{ isFullscreen ? '是' : '否' }}</p>
+        <p>横屏模式: {{ isLandscape ? '是' : '否' }}</p>
+      </div>
+      
       <div class="loading-spinner" v-if="!videos[currentIndex].isLoaded">
         <i class="material-icons">hourglass_empty</i>
       </div>
-            <!-- 视频信息 -->
+      <!-- 视频信息 -->
       <!-- <div class="video-info" :class="{ visible: currentIndex !== null }">
         <div class="user-info">
           <img :src="videos[currentIndex].authorAvatar" :alt="videos[currentIndex].authorName" class="avatar">
@@ -61,11 +83,18 @@
       </div> -->
 
       <!-- 右侧操作栏 -->
-      <div class="action-bar">
-        <!-- 头像 -->
-        <div class="user-profile" @click="goToProfile">
-          <img :src="user.avatar || defaultAvatar" :alt="user.username || t('common.notLoggedIn')" class="profile-avatar">
-          <div class="status-indicator" :class="{ 'online': user.isLoggedIn }"></div>
+      <div class="action-bar" :class="{ 'landscape-action-bar': isLandscape }">
+        <!-- 作者头像 -->
+        <div class="author-avatar-wrapper">
+          <div class="author-avatar" @click="goToUserProfile(videos[currentIndex].authorId)">
+            <img :src="videos[currentIndex].authorAvatar" :alt="videos[currentIndex].authorName">
+          </div>
+          <div class="follow-plus-container" v-if="!videos[currentIndex].isFollowed" @click.stop="toggleFollow(currentIndex)">
+            <div class="follow-plus">
+              <i class="material-icons" v-if="videos[currentIndex].followAnimation === 'check'">check</i>
+              <i class="material-icons" v-else>add</i>
+            </div>
+          </div>
         </div>
 
         <!-- 点赞按钮 -->
@@ -93,6 +122,16 @@
         </div>
       </div>
 
+      <!-- 作者名称 -->
+      <!-- <div class="author-name-container">
+        <div class="author-name">@{{ videos[currentIndex].authorName }}</div>
+      </div> -->
+      
+      <!-- 视频描述 -->
+      <div class="video-desc" :class="{ 'landscape-desc': isLandscape }">
+        <p>{{ videos[currentIndex].description }}</p>
+      </div>
+
       <!-- 评论面板 -->
       <CommentPanel
         v-model="showCommentPanel"
@@ -103,6 +142,7 @@
       <div 
         class="video-controls" 
         v-if="currentIndex !== null"
+        :class="{ 'landscape-controls': isFullscreen }"
       >
         <!-- 进度条和时间显示 -->
         <div class="progress-container">
@@ -115,12 +155,70 @@
           <div class="progress-bar" @click.stop.prevent="handleProgressClick">
             <div class="progress-bg"></div>
             <div class="progress-current" :style="{ width: `${videos[currentIndex].progress}%` }"></div>
+            <div class="progress-handle" :style="{ left: `${videos[currentIndex].progress}%` }"></div>
           </div>
           
           <!-- 时间显示 -->
           <div class="time-display">
             {{ formatTime(videos[currentIndex].currentTime) }} / {{ formatTime(videos[currentIndex].duration) }}
           </div>
+          
+          <!-- 倍速按钮 -->
+          <div class="speed-btn" @click.stop.prevent="toggleSpeedControls">
+            <span>{{ currentPlaybackSpeed }}x</span>
+          </div>
+          
+          <!-- 静音按钮 -->
+          <div class="mute-btn" @click.stop.prevent="toggleMute">
+            <i class="material-icons">{{ videos[currentIndex].isMuted ? 'volume_off' : 'volume_up' }}</i>
+          </div>
+          
+          <!-- 全屏按钮 (当视频是横向时显示) -->
+          <div 
+            v-if="videos[currentIndex].isWidescreen && !isFullscreen" 
+            class="fullscreen-btn" 
+            @click.stop.prevent="toggleFullscreen"
+          >
+            <i class="material-icons">fullscreen</i>
+          </div>
+          
+          <!-- 退出全屏按钮 -->
+          <div 
+            v-if="isFullscreen" 
+            class="fullscreen-btn" 
+            @click.stop.prevent="toggleFullscreen"
+          >
+            <i class="material-icons">fullscreen_exit</i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 全屏指示器 (当视频是横向但未全屏时显示) -->
+      <div 
+        v-if="videos[currentIndex].isWidescreen && !isFullscreen" 
+        class="fullscreen-indicator"
+        @click="toggleFullscreen"
+      >
+        <i class="material-icons">fullscreen</i>
+      </div>
+    </div>
+
+    <!-- 添加倍速控制面板 -->
+    <div 
+      class="playback-speed-controls" 
+      v-if="showSpeedControls"
+      :class="{ 'landscape-speed-controls': isLandscape }"
+    >
+      <div class="speed-title">播放速度</div>
+      <div class="speed-options">
+        <div 
+          v-for="speed in playbackSpeeds" 
+          :key="speed" 
+          class="speed-option" 
+          :class="{ 'active': currentPlaybackSpeed === speed }"
+          @click="setPlaybackSpeed(speed)"
+        >
+          {{ speed }}x
         </div>
       </div>
     </div>
@@ -141,7 +239,7 @@
       </div>
       <div class="nav-item publish-btn" @click="handlePublish">
         <span class="material-icons">add_circle</span>
-        <span class="nav-label">发布</span>
+        <!-- <span class="nav-label">发布</span> -->
       </div>
       <div class="nav-item" :class="{ active: currentTab === 'messages' }" @click="handleTabClick('messages')">
         <span class="material-icons">{{ currentTab === 'messages' ? 'chat_bubble' : 'chat_bubble_outline' }}</span>
@@ -171,35 +269,50 @@ const { t } = useI18n()
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 const defaultAvatar = 'https://randomuser.me/api/portraits/lego/1.jpg'
 
-// 示例视频列表
+// 示例视频列表，使用本地文件
 const sampleVideos = [
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
+  // 使用项目内视频或公开可访问的视频
+  '/videos/vertical1.mp4',
+  '/videos/vertical2.mp4',
+  '/videos/vertical3.mp4',
+  '/videos/horizontal1.mp4',
+  '/videos/horizontal2.mp4'
 ]
 
 // 生成随机视频数据
 const generateRandomVideos = (count) => {
+  // 创建一个备用视频数组，确保即使没有本地视频也能展示UI
+  const fallbackUrls = new Array(count).fill('').map((_, i) => 
+    `data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAABhtZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE1MCByMjkwMCAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMTggLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0xIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDM6MHgxMTMgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz02IGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiBiX2FkYXB0PTEgYl9iaWFzPTAgZGlyZWN0PTEgd2VpZ2h0Yj0xIG9wZW5fZ29wPTAgd2VpZ2h0cD0yIGtleWludD1pbmZpbml0ZSBrZXlpbnRfbWluPTI5IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMAAA`
+  );
+
   return Array.from({ length: count }, (_, index) => ({
     id: String(index + 1),
-    url: sampleVideos[index % sampleVideos.length],
+    authorId: String(index + 1),
+    url: index < sampleVideos.length ? sampleVideos[index] : fallbackUrls[index],
+    poster: `https://picsum.photos/720/1280?random=${index}`, // 预览图，提高加载体验
     authorName: '用户' + (index + 1),
     authorAvatar: 'https://randomuser.me/api/portraits/men/' + (index + 1) + '.jpg',
-    description: '这是第' + (index + 1) + '个视频描述，展示精彩内容',
+    description: '视频描述 ' + (index + 1),
     likes: Math.floor(Math.random() * 10000),
     comments: Math.floor(Math.random() * 1000),
     shares: Math.floor(Math.random() * 500),
     isLiked: false,
+    isFollowed: false,
+    followAnimation: null,
     isAnimating: false,
     isPlaying: false,
+    isMuted: true, // 默认静音，避免扰民
     currentTime: 0,
     duration: 0,
-    progress: 0
-  }))
+    progress: 0,
+    aspectRatio: 9/16, // 默认竖屏比例
+    isWidescreen: false, // 是否是宽屏视频
+    isLoaded: false
+  }));
 }
 
+// 然后再使用该函数
 const videos = ref(generateRandomVideos(5))
 const currentIndex = ref(0)
 const videoRefs = ref(null)
@@ -209,10 +322,44 @@ let hasInteracted = false
 const showCommentPanel = ref(false)
 const showSearchPanel = ref(false)
 const hasUserInteracted = ref(false)
+const isLandscape = ref(false)  // 是否横向模式
 
 // 添加新的响应式变量
 const currentTab = ref('home')
 const unreadCount = ref(3) // 未读消息数量
+const isFullscreen = ref(false) // 是否全屏模式
+const showDebug = ref(false) // 是否显示调试信息
+const showSpeedControls = ref(false) // 是否显示倍速控制
+const playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0] // 可选播放速度
+const currentPlaybackSpeed = ref(1.0) // 当前播放速度
+
+// 检测视频比例，决定是否是宽屏视频
+const checkVideoAspectRatio = (index) => {
+  if (!videoRefs.value || !videoRefs.value[index]) return
+  const video = videoRefs.value[index]
+  
+  // 等待视频元数据加载完成
+  if (video.videoWidth && video.videoHeight) {
+    // 计算视频宽高比
+    const aspectRatio = video.videoWidth / video.videoHeight
+    console.log(`视频宽高比: ${aspectRatio}, 宽: ${video.videoWidth}, 高: ${video.videoHeight}`)
+    
+    // 保存视频的实际宽高比
+    videos.value[index].aspectRatio = aspectRatio
+    
+    // 如果宽度大于高度（比如16:9的视频），则是横向视频(宽屏)
+    const isWidescreen = aspectRatio > 1
+    videos.value[index].isWidescreen = isWidescreen
+    console.log(`视频是否宽屏: ${isWidescreen}`)
+    
+    // 只有宽屏视频和全屏模式下才设置横屏模式
+    if (isFullscreen.value && videos.value[index].isWidescreen) {
+      isLandscape.value = true
+    } else {
+      isLandscape.value = false
+    }
+  }
+}
 
 const handleTouchStart = (e) => {
   // 如果点击的是控制层或进度条，不处理触摸事件
@@ -259,80 +406,72 @@ const handleTouchEnd = () => {
   }, 300);
 }
 
-const togglePlay = async () => {
-  if (!videoRefs.value) return;
-  const video = videoRefs.value[currentIndex.value];
-  if (!video) return;
+const togglePlay = () => {
+  if (!videoRefs.value || !videoRefs.value[currentIndex.value]) return
+  
+  const video = videoRefs.value[currentIndex.value]
+  
+  if (video.paused) {
+    // 启用硬件加速
+    video.style.transform = 'translateZ(0)'
+    
+    const playPromise = video.play()
+    
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        videos.value[currentIndex.value].isPlaying = true
+      }).catch(error => {
+        console.error('播放失败:', error)
+        // 如果自动播放被阻止，提供交互选项
+        videos.value[currentIndex.value].isPlaying = false
+      })
+    }
+  } else {
+    video.pause()
+    videos.value[currentIndex.value].isPlaying = false
+  }
+}
 
-  try {
-    // 先更新状态，避免重复点击
-    const isCurrentlyPlaying = !video.paused;
-    videos.value[currentIndex.value].isPlaying = !isCurrentlyPlaying;
+const updateVideoPlay = () => {
+  if (!videoRefs.value) return
 
-    if (isCurrentlyPlaying) {
-      // 如果正在播放，直接暂停
-      video.pause();
+  for (let i = 0; i < videos.value.length; i++) {
+    const video = videoRefs.value[i]
+    if (!video) continue
+
+    if (i === currentIndex.value) {
+      // 如果是当前视频，准备播放
+      if (hasUserInteracted.value) {
+        // 预先设置播放速度
+        video.playbackRate = currentPlaybackSpeed.value
+        
+        // 使用requestAnimationFrame提高渲染性能
+        requestAnimationFrame(() => {
+          // 启用硬件加速
+          video.style.transform = 'translateZ(0)'
+          
+          const playPromise = video.play()
+          
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              videos.value[i].isPlaying = true
+            }).catch(error => {
+              console.error('播放失败:', error)
+              videos.value[i].isPlaying = false
+            })
+          }
+        })
+      }
     } else {
-      // 如果已暂停，尝试播放
-      try {
-        video.muted = !hasInteracted;
-        await video.play();
-      } catch (error) {
-        // 如果播放失败，恢复状态
-        console.error('播放失败:', error);
-        videos.value[currentIndex.value].isPlaying = false;
-      }
-    }
-  } catch (error) {
-    console.error('操作失败:', error);
-    // 发生错误时恢复状态
-    videos.value[currentIndex.value].isPlaying = !video.paused;
-  }
-};
-
-const updateVideoPlay = async () => {
-  if (!videoRefs.value) return;
-
-  // 先暂停所有视频
-  videoRefs.value.forEach((video, idx) => {
-    if (idx !== currentIndex.value) {
-      video.pause();
-      videos.value[idx].isPlaying = false;
-    }
-  });
-
-  // 获取当前视频
-  const currentVideo = videoRefs.value[currentIndex.value];
-  if (currentVideo) {
-    try {
-      currentVideo.muted = !hasInteracted;
-      
-      // 如果视频已经准备好，直接播放
-      if (currentVideo.readyState >= 2) {
-        await currentVideo.play();
-        videos.value[currentIndex.value].isPlaying = true;
-      } else {
-        // 等待视频加载完成
-        await new Promise((resolve) => {
-          const playHandler = async () => {
-            try {
-              await currentVideo.play();
-              videos.value[currentIndex.value].isPlaying = true;
-            } catch (e) {
-              console.error('视频加载后播放失败:', e);
-              videos.value[currentIndex.value].isPlaying = false;
-            }
-            resolve();
-          };
-          currentVideo.addEventListener('canplay', playHandler, { once: true });
-        });
-      }
-    } catch (error) {
-      console.error('播放失败:', error);
-      videos.value[currentIndex.value].isPlaying = false;
+      // 如果不是当前视频，则暂停并重置
+      video.pause()
+      video.currentTime = 0
+      videos.value[i].isPlaying = false
+      videos.value[i].currentTime = 0
+      videos.value[i].progress = 0
     }
   }
-};
+}
 
 const handleVideoEnd = () => {
   if (currentIndex.value < videos.value.length - 1) {
@@ -430,8 +569,17 @@ const handleMessage = () => {
 const handleTimeUpdate = (index) => {
   if (!videoRefs.value || !videoRefs.value[index]) return
   const video = videoRefs.value[index]
-  videos.value[index].currentTime = video.currentTime
-  videos.value[index].progress = (video.currentTime / video.duration) * 100
+  
+  // 仅在当前视频时更新（节省性能）
+  if (index === currentIndex.value) {
+    videos.value[index].currentTime = video.currentTime
+    videos.value[index].progress = (video.currentTime / video.duration) * 100 || 0
+    
+    // 更新播放速度以确保一致性
+    if (video.playbackRate !== currentPlaybackSpeed.value) {
+      video.playbackRate = currentPlaybackSpeed.value
+    }
+  }
 }
 
 const handleVideoLoaded = (index) => {
@@ -439,6 +587,9 @@ const handleVideoLoaded = (index) => {
   if (!videoRefs.value || !videoRefs.value[index]) return
   const video = videoRefs.value[index]
   videos.value[index].duration = video.duration
+  
+  // 检测视频比例
+  checkVideoAspectRatio(index)
 }
 
 const handleProgressClick = (e) => {
@@ -517,6 +668,100 @@ const handleTabClick = (tab) => {
 const handlePublish = () => {
   router.push('/publish')
 }
+
+// 添加关注/取消关注函数
+const toggleFollow = (index) => {
+  if (!user.isLoggedIn) {
+    router.push({
+      path: '/login',
+      query: { from: '/short-video' }
+    })
+    return
+  }
+
+  // 显示勾选动画
+  videos.value[index].followAnimation = 'check'
+  
+  // 一段时间后隐藏按钮
+  setTimeout(() => {
+    videos.value[index].isFollowed = true
+  }, 800)
+}
+
+// 跳转到用户资料页
+const goToUserProfile = (userId) => {
+  if (user.isLoggedIn) {
+    router.push(`/user/${userId}`)
+  } else {
+    router.push('/login')
+  }
+}
+
+// 切换全屏模式
+const toggleFullscreen = () => {
+  console.log("切换全屏模式")
+  isFullscreen.value = !isFullscreen.value
+  
+  if (isFullscreen.value && videos.value[currentIndex.value].isWidescreen) {
+    // 进入全屏模式
+    isLandscape.value = true
+    console.log("进入横屏模式")
+    
+    // 可以在这里添加屏幕旋转逻辑，如果平台支持的话
+    if (screen.orientation && screen.orientation.lock) {
+      try {
+        console.log("尝试锁定屏幕方向")
+        screen.orientation.lock('landscape').catch(e => {
+          console.warn('无法锁定横屏模式:', e)
+        })
+      } catch (e) {
+        console.warn('不支持屏幕旋转锁定:', e)
+      }
+    }
+  } else {
+    // 退出全屏模式
+    isLandscape.value = false
+    console.log("退出横屏模式")
+    
+    // 恢复屏幕旋转
+    if (screen.orientation && screen.orientation.unlock) {
+      try {
+        screen.orientation.unlock()
+      } catch (e) {
+        console.warn('无法解除屏幕旋转锁定:', e)
+      }
+    }
+  }
+}
+
+// 设置播放速度
+const setPlaybackSpeed = (speed) => {
+  currentPlaybackSpeed.value = speed
+  
+  // 应用到当前视频
+  if (videoRefs.value && videoRefs.value[currentIndex.value]) {
+    videoRefs.value[currentIndex.value].playbackRate = speed
+  }
+  
+  // 隐藏控制面板
+  setTimeout(() => {
+    showSpeedControls.value = false
+  }, 300)
+}
+
+// 显示/隐藏倍速控制面板
+const toggleSpeedControls = () => {
+  showSpeedControls.value = !showSpeedControls.value
+}
+
+// 切换静音状态
+const toggleMute = () => {
+  videos.value[currentIndex.value].isMuted = !videos.value[currentIndex.value].isMuted
+  
+  if (videoRefs.value && videoRefs.value[currentIndex.value]) {
+    videoRefs.value[currentIndex.value].muted = videos.value[currentIndex.value].isMuted
+  }
+}
 </script>
 
 <style scoped>
@@ -537,8 +782,6 @@ const handlePublish = () => {
   overflow: hidden;
   touch-action: pan-y;
   background: #000;
-  perspective: 1000px;
-  transform-style: preserve-3d;
 }
 
 .video-player {
@@ -658,11 +901,105 @@ const handlePublish = () => {
 .action-bar {
   position: fixed;
   right: 20px;
-  bottom: 100px;
+  bottom: 180px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
+  z-index: 10;
+}
+
+.author-avatar-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+  z-index: 10;
+  width: 50px;
+  height: 50px;
+}
+
+.author-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #fff;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.author-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 修改关注按钮样式，使其位于头像右下角 */
+.follow-plus-container {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.follow-plus {
+  background: rgba(255, 0, 80, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  cursor: pointer;
+  z-index: 12;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.follow-plus i {
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.follow-plus:active {
+  transform: scale(0.9);
+}
+
+.author-name-container {
+  position: fixed;
+  right: 20px;
+  bottom: 155px;
+  z-index: 10;
+}
+
+.author-name {
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  text-align: center;
+}
+
+.video-desc {
+  position: absolute;
+  left: 16px;
+  bottom: 160px;
+  width: 70%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: left;
   z-index: 10;
 }
 
@@ -674,26 +1011,26 @@ const handlePublish = () => {
 }
 
 .action-icon {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 4px;
   transition: all 0.3s ease;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
 }
 
 .action-icon i {
-  font-size: 22px;
+  font-size: 26px;
   color: rgba(255, 255, 255, 0.9);
   transition: all 0.3s ease;
 }
 
 .action-icon:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
   transform: scale(1.1);
 }
 
@@ -709,40 +1046,6 @@ const handlePublish = () => {
   color: #fff;
   font-size: 12px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.user-profile {
-  position: relative;
-  cursor: pointer;
-  margin-bottom: 24px;
-}
-
-.profile-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s;
-}
-
-.profile-avatar:hover {
-  transform: scale(1.1);
-}
-
-.status-indicator {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ccc;
-  border: 2px solid #fff;
-}
-
-.status-indicator.online {
-  background: #4CAF50;
 }
 
 /* 添加评论面板样式 */
@@ -766,11 +1069,11 @@ const handlePublish = () => {
 .action-bar {
   position: fixed;
   right: 20px;
-  bottom: 100px;
+  bottom: 180px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   z-index: 10;
 }
 
@@ -827,21 +1130,23 @@ const handlePublish = () => {
 /* 修改视频控制层样式 */
 .video-controls {
   position: absolute;
-  bottom: 0;
+  bottom: 71px;
   left: 0;
   right: 0;
-  padding: 20px;
+  padding: 10px 20px;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
-  z-index: 10;
+  z-index: 20;
   opacity: 1;
   pointer-events: auto;
+  display: flex;
+  align-items: center;
 }
 
 .progress-container {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 20px;
 }
 
 /* 播放按钮样式 */
@@ -849,7 +1154,7 @@ const handlePublish = () => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(212, 175, 55, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -857,11 +1162,11 @@ const handlePublish = () => {
   transition: all 0.2s ease;
   flex-shrink: 0;
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
 }
 
 .play-pause-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(212, 175, 55, 0.4);
   transform: scale(1.05);
 }
 
@@ -1237,5 +1542,255 @@ const handlePublish = () => {
 
 .nav-item:hover .svg-icon {
   fill: #e5c158;
+}
+
+/* 添加横向视频模式样式 */
+.landscape-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-player.landscape {
+  object-fit: contain;
+  background: #000;
+}
+
+.landscape-action-bar {
+  right: 20px;
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.landscape-desc {
+  left: 16px;
+  bottom: auto;
+  top: 20px;
+  width: calc(100% - 100px);
+}
+
+.landscape-controls {
+  bottom: 100px;
+}
+
+/* 添加全屏按钮样式 */
+.fullscreen-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.fullscreen-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: scale(1.1);
+}
+
+.fullscreen-btn i {
+  color: #fff;
+  font-size: 22px;
+}
+
+/* 添加全屏指示器样式 */
+.fullscreen-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 15;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.fullscreen-indicator:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: scale(1.1);
+}
+
+.fullscreen-indicator i {
+  color: #fff;
+  font-size: 24px;
+}
+
+/* 添加调试信息样式 */
+.debug-info {
+  position: absolute;
+  top: 60px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  z-index: 1000;
+}
+
+.debug-info p {
+  margin: 5px 0;
+}
+
+/* 添加宽屏视频样式 */
+.widescreen-player {
+  object-fit: contain !important;
+  background-color: #000;
+}
+
+.widescreen-player.active {
+  width: 100%;
+  height: auto;
+  max-height: 65%;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%) !important;
+}
+
+/* 添加竖屏视频样式，确保完全全屏 */
+.video-player.active:not(.widescreen-player) {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+/* 添加倍速控制样式 */
+.playback-speed-controls {
+  position: absolute;
+  right: 20px;
+  bottom: 150px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  padding: 15px;
+  width: 200px;
+  z-index: 30;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform-origin: bottom right;
+  animation: pop-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.landscape-speed-controls {
+  bottom: auto;
+  top: 150px;
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.speed-title {
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.speed-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.speed-option {
+  width: 50px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.speed-option:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.speed-option.active {
+  background: #FF0050;
+  font-weight: bold;
+}
+
+/* 优化进度条样式 */
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: height 0.2s ease;
+}
+
+.progress-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FF0050;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px rgba(255, 0, 80, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.progress-bar:hover {
+  height: 6px;
+}
+
+.progress-bar:hover .progress-handle {
+  opacity: 1;
+}
+
+/* 添加速度和静音按钮样式 */
+.speed-btn, .mute-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.speed-btn {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.speed-btn:hover, .mute-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: scale(1.1);
 }
 </style> 

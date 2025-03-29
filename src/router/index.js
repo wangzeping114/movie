@@ -5,6 +5,7 @@ import Profile from '../views/Profile.vue'
 import Publish from '../views/Publish.vue'
 import Messages from '../views/Messages.vue'
 import Live from '../views/Live.vue'
+import LiveView from '../views/LiveView.vue'
 
 const routes = [
   {
@@ -29,6 +30,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/user/:id',
+    name: 'UserProfile',
+    component: Profile,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/publish',
     name: 'Publish',
     component: Publish,
@@ -43,6 +50,11 @@ const routes = [
     path: '/live',
     name: 'Live',
     component: Live
+  },
+  {
+    path: '/live/:id',
+    name: 'LiveView',
+    component: LiveView
   }
 ]
 

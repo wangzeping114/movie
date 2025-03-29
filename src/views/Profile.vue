@@ -1,40 +1,56 @@
 <template>
   <div class="profile-container">
-    <!-- 顶部导航栏 -->
+    <!-- 导航栏 -->
     <div class="nav-bar">
-      <span class="material-icons back-icon" @click="router.back()">arrow_back</span>
-      <h1>个人主页</h1>
+      <div class="back-btn" @click="router.back()">
+        <span class="material-icons">arrow_back</span>
+      </div>
+      <h1>{{ isCurrentUser ? t('profile.title') : profileUser.username }}</h1>
       <div class="nav-actions">
-        <span class="material-icons settings-icon" @click="showSettings = true">settings</span>
+        <span class="material-icons" v-if="isCurrentUser" @click="showSettings = true">settings</span>
+        <span class="material-icons" v-else @click="toggleFollow">{{ profileUser.isFollowed ? 'done' : 'add' }}</span>
       </div>
     </div>
 
-    <!-- 用户信息区域 -->
-    <div class="user-info">
-      <div class="avatar-container">
-        <img :src="user.avatar || 'https://picsum.photos/200'" :alt="user.username" class="avatar">
-        <div class="edit-avatar" @click="handleEditAvatar">
-          <span class="material-icons">edit</span>
+    <!-- 用户资料 -->
+    <div class="profile-header">
+      <div class="avatar-container" @click="isCurrentUser ? handleAvatarClick() : null">
+        <img :src="profileUser.avatar" alt="Avatar" class="avatar">
+        <div class="avatar-overlay" v-if="isCurrentUser">
+          <span class="material-icons">photo_camera</span>
         </div>
       </div>
-      <h2 class="username">{{ user.username || '未设置昵称' }}</h2>
-      <p class="user-id">ID: {{ user.id || '未登录' }}</p>
+      <h2 class="username">{{ profileUser.username }}</h2>
+      <p class="bio">{{ profileUser.bio }}</p>
       <div class="stats">
         <div class="stat-item">
-          <span class="count">{{ formatCount(userStats.likes) }}</span>
-          <span class="label">获赞</span>
+          <span class="stat-count">{{ formatNumber(profileUser.stats.likes) }}</span>
+          <span class="stat-label">{{ t('profile.likes') }}</span>
         </div>
         <div class="stat-item">
-          <span class="count">{{ formatCount(userStats.followers) }}</span>
-          <span class="label">粉丝</span>
+          <span class="stat-count">{{ formatNumber(profileUser.stats.followers) }}</span>
+          <span class="stat-label">{{ t('profile.followers') }}</span>
         </div>
         <div class="stat-item">
-          <span class="count">{{ formatCount(userStats.following) }}</span>
-          <span class="label">关注</span>
+          <span class="stat-count">{{ formatNumber(profileUser.stats.following) }}</span>
+          <span class="stat-label">{{ t('profile.following') }}</span>
         </div>
       </div>
-      <div class="edit-profile" @click="showEditProfile = true">
-        <span>编辑资料</span>
+      <div class="profile-actions" v-if="!isCurrentUser">
+        <button class="action-btn follow-btn" :class="{ 'followed': profileUser.isFollowed }" @click="toggleFollow">
+          <span class="material-icons">{{ profileUser.isFollowed ? 'done' : 'add' }}</span>
+          {{ profileUser.isFollowed ? t('profile.followed') : t('profile.follow') }}
+        </button>
+        <button class="action-btn message-btn" @click="handleMessage">
+          <span class="material-icons">message</span>
+          {{ t('profile.message') }}
+        </button>
+      </div>
+      <div class="profile-actions" v-else>
+        <button class="action-btn edit-btn" @click="showEditProfile = true">
+          <span class="material-icons">edit</span>
+          {{ t('profile.editProfile') }}
+        </button>
       </div>
     </div>
 
@@ -43,116 +59,110 @@
       <div 
         v-for="tab in tabs" 
         :key="tab.id"
-        class="tab"
+        class="tab" 
         :class="{ active: currentTab === tab.id }"
         @click="currentTab = tab.id"
       >
         <span class="material-icons">{{ tab.icon }}</span>
-        <span class="tab-label">{{ tab.label }}</span>
+        <span>{{ tab.label }}</span>
       </div>
     </div>
 
     <!-- 内容区域 -->
-    <div class="content">
+    <div class="content-area">
       <!-- 作品列表 -->
-      <div v-if="currentTab === 'works'" class="works-list">
-        <div v-if="works.length === 0" class="empty-state">
-          <span class="material-icons">videocam_off</span>
-          <p>还没有发布作品</p>
-        </div>
-        <div v-else class="video-grid">
-          <div v-for="(video, index) in works" 
-               :key="index" 
-               class="video-item"
-               @click="handleVideoClick(video)">
-            <div class="video-wrapper">
-              <video
-                :src="video.url"
-                class="video-preview"
-                loop
-                muted
-                @mouseenter="handleVideoHover($event, true)"
-                @mouseleave="handleVideoHover($event, false)"
-              ></video>
-              <div class="video-overlay">
-                <span class="material-icons">play_circle</span>
-              </div>
-            </div>
-            <div class="video-info">
-              <div class="video-stats">
-                <span class="material-icons">favorite</span>
-                <span>{{ formatCount(video.likes) }}</span>
-              </div>
-              <div class="video-title">{{ video.description }}</div>
-            </div>
+      <div class="video-grid" v-if="currentTab === 'works'" v-show="works.length > 0">
+        <div v-for="(video, index) in works" :key="index" class="video-item" @click="handleVideoClick(video)">
+          <video
+            :src="video.url"
+            class="video-preview"
+            loop
+            muted
+            @mouseenter="handleVideoHover($event, true)"
+            @mouseleave="handleVideoHover($event, false)"
+          ></video>
+          <div class="video-info">
+            <span class="view-count">{{ formatNumber(video.views) }} 次观看</span>
           </div>
         </div>
       </div>
+      <div class="empty-state" v-else-if="currentTab === 'works' && works.length === 0">
+        <span class="material-icons">videocam_off</span>
+        <p>{{ isCurrentUser ? t('profile.noWorks') : t('profile.userNoWorks') }}</p>
+        <button v-if="isCurrentUser" class="action-btn" @click="router.push('/publish')">
+          {{ t('profile.createWork') }}
+        </button>
+      </div>
 
-      <!-- 喜欢列表 -->
-      <div v-if="currentTab === 'likes'" class="likes-list">
-        <div v-if="likedVideos.length === 0" class="empty-state">
-          <span class="material-icons">favorite_border</span>
-          <p>还没有喜欢的视频</p>
-        </div>
-        <div v-else class="video-grid">
-          <div v-for="video in likedVideos" 
-               :key="video.id" 
-               class="video-item"
-               @click="handleVideoClick(video)">
-            <div class="video-wrapper">
-              <video
-                :src="video.url"
-                class="video-preview"
-                loop
-                muted
-                @mouseenter="handleVideoHover($event, true)"
-                @mouseleave="handleVideoHover($event, false)"
-              ></video>
-              <div class="video-overlay">
-                <span class="material-icons">play_circle</span>
-              </div>
-            </div>
-            <div class="video-info">
-              <div class="video-stats">
-                <span class="material-icons">favorite</span>
-                <span>{{ formatCount(video.likes) }}</span>
-              </div>
-              <div class="video-title">{{ video.description }}</div>
-            </div>
+      <!-- 喜欢的视频 -->
+      <div class="video-grid" v-if="currentTab === 'likes'" v-show="likedVideos.length > 0">
+        <div v-for="(video, index) in likedVideos" :key="index" class="video-item" @click="handleVideoClick(video)">
+          <video
+            :src="video.url"
+            class="video-preview"
+            loop
+            muted
+            @mouseenter="handleVideoHover($event, true)"
+            @mouseleave="handleVideoHover($event, false)"
+          ></video>
+          <div class="video-info">
+            <span class="view-count">{{ formatNumber(video.views) }} 次观看</span>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- 发布按钮 -->
-    <div class="publish-fab" @click="handlePublish">
-      <span class="material-icons">add</span>
+      <div class="empty-state" v-else-if="currentTab === 'likes' && likedVideos.length === 0">
+        <span class="material-icons">favorite_border</span>
+        <p>{{ isCurrentUser ? t('profile.noLikes') : t('profile.userNoLikes') }}</p>
+        <button v-if="isCurrentUser" class="action-btn" @click="router.push('/short-video')">
+          {{ t('profile.exploreLikes') }}
+        </button>
+      </div>
     </div>
 
     <!-- 设置弹窗 -->
     <div v-if="showSettings" class="settings-modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>设置</h3>
+          <h3>{{ t('settings.title') }}</h3>
           <span class="material-icons close-icon" @click="showSettings = false">close</span>
         </div>
         <div class="settings-list">
-          <div class="settings-item" @click="handleAccountSettings">
-            <span class="material-icons">person</span>
-            <span>账号设置</span>
+          <div class="settings-item" @click="handleLanguageSettings">
+            <span class="material-icons">language</span>
+            <span>{{ t('settings.language') }}</span>
+            <span class="material-icons right-icon">chevron_right</span>
           </div>
-          <div class="settings-item" @click="handlePrivacySettings">
-            <span class="material-icons">lock</span>
-            <span>隐私设置</span>
+          <div class="settings-item">
+            <span class="material-icons">dark_mode</span>
+            <span>{{ t('settings.darkMode') }}</span>
+            <div class="switch">
+              <input type="checkbox" id="dark-mode-switch">
+              <label for="dark-mode-switch"></label>
+            </div>
           </div>
-          <div class="settings-item" @click="handleNotificationSettings">
+          <div class="settings-item">
             <span class="material-icons">notifications</span>
-            <span>通知设置</span>
+            <span>{{ t('settings.notifications') }}</span>
+            <span class="material-icons right-icon">chevron_right</span>
+          </div>
+          <div class="settings-item">
+            <span class="material-icons">lock</span>
+            <span>{{ t('settings.privacy') }}</span>
+            <span class="material-icons right-icon">chevron_right</span>
+          </div>
+          <div class="settings-item">
+            <span class="material-icons">help_outline</span>
+            <span>{{ t('settings.help') }}</span>
+            <span class="material-icons right-icon">chevron_right</span>
+          </div>
+          <div class="settings-item">
+            <span class="material-icons">info_outline</span>
+            <span>{{ t('settings.about') }}</span>
+            <span class="material-icons right-icon">chevron_right</span>
           </div>
           <div class="settings-item logout" @click="handleLogout">
             <span class="material-icons">logout</span>
-            <span>退出登录</span>
+            <span>{{ t('settings.logout') }}</span>
           </div>
         </div>
       </div>
@@ -162,142 +172,68 @@
     <div v-if="showEditProfile" class="settings-modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>编辑资料</h3>
+          <h3>{{ t('profile.editProfile') }}</h3>
           <span class="material-icons close-icon" @click="showEditProfile = false">close</span>
         </div>
-        <div class="edit-form">
+        <div class="edit-profile-form">
           <div class="form-group">
-            <label>昵称</label>
-            <input v-model="editForm.username" type="text" placeholder="请输入昵称">
+            <label>{{ t('profile.username') }}</label>
+            <input type="text" v-model="profileForm.username" :placeholder="t('profile.usernamePlaceholder')">
           </div>
           <div class="form-group">
-            <label>简介</label>
-            <textarea v-model="editForm.bio" placeholder="介绍一下自己吧"></textarea>
+            <label>{{ t('profile.bio') }}</label>
+            <textarea v-model="profileForm.bio" :placeholder="t('profile.bioPlaceholder')"></textarea>
           </div>
-          <button class="save-btn" @click="saveProfile">保存</button>
+          <button class="submit-btn" @click="handleProfileSubmit">{{ t('common.save') }}</button>
         </div>
       </div>
     </div>
 
-    <!-- 头像上传弹窗 -->
+    <!-- 头像上传 -->
     <div v-if="showAvatarUpload" class="settings-modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>更换头像</h3>
+          <h3>{{ t('profile.changeAvatar') }}</h3>
           <span class="material-icons close-icon" @click="showAvatarUpload = false">close</span>
         </div>
         <div class="avatar-upload">
-          <div class="preview-container">
-            <img :src="avatarPreview || user.avatar || 'https://picsum.photos/200'" alt="头像预览" class="avatar-preview">
+          <div class="avatar-preview">
+            <img :src="avatarPreview || profileUser.avatar" alt="Avatar Preview">
           </div>
-          <input 
-            type="file" 
-            ref="fileInput" 
-            accept="image/*" 
-            style="display: none" 
-            @change="handleFileChange"
-          >
           <div class="upload-actions">
-            <button class="upload-btn" @click="$refs.fileInput.click()">
+            <button class="upload-btn" @click="triggerFileInput">
               <span class="material-icons">upload</span>
-              选择图片
+              {{ t('profile.uploadPhoto') }}
             </button>
-            <button class="save-btn" @click="saveAvatar" :disabled="!avatarFile">
-              保存头像
+            <input type="file" ref="fileInput" style="display: none;" accept="image/*" @change="handleFileChange">
+            <button class="submit-btn" :disabled="!avatarFile" @click="handleAvatarSubmit">
+              {{ t('common.save') }}
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 设置相关弹窗 -->
-    <div v-if="showAccountSettings" class="settings-modal">
+    <!-- 添加语言设置弹窗 -->
+    <div v-if="showLanguageSettings" class="settings-modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>账号设置</h3>
-          <span class="material-icons close-icon" @click="showAccountSettings = false">close</span>
+          <h3>{{ t('settings.language') }}</h3>
+          <span class="material-icons close-icon" @click="showLanguageSettings = false">close</span>
         </div>
-        <div class="settings-form">
-          <div class="form-group">
-            <label>修改密码</label>
-            <input v-model="accountForm.oldPassword" type="password" placeholder="当前密码">
-            <input v-model="accountForm.newPassword" type="password" placeholder="新密码">
-            <input v-model="accountForm.confirmPassword" type="password" placeholder="确认新密码">
+        <div class="language-settings">
+          <div class="language-option" 
+               :class="{ active: currentLocale === 'zh-CN' }"
+               @click="changeLanguage('zh-CN')">
+            <span class="language-name">中文</span>
+            <span class="material-icons check-icon" v-if="currentLocale === 'zh-CN'">check_circle</span>
           </div>
-          <button class="save-btn" @click="saveAccountSettings">保存修改</button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showPrivacySettings" class="settings-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>隐私设置</h3>
-          <span class="material-icons close-icon" @click="showPrivacySettings = false">close</span>
-        </div>
-        <div class="settings-form">
-          <div class="switch-group">
-            <label>
-              <span>私密账号</span>
-              <div class="switch" :class="{ active: privacyForm.isPrivate }" @click="privacyForm.isPrivate = !privacyForm.isPrivate">
-                <div class="switch-handle"></div>
-              </div>
-            </label>
-            <p class="description">开启后，只有关注的人才能看到你的作品</p>
+          <div class="language-option"
+               :class="{ active: currentLocale === 'en-US' }"
+               @click="changeLanguage('en-US')">
+            <span class="language-name">English</span>
+            <span class="material-icons check-icon" v-if="currentLocale === 'en-US'">check_circle</span>
           </div>
-          <div class="switch-group">
-            <label>
-              <span>允许评论</span>
-              <div class="switch" :class="{ active: privacyForm.allowComments }" @click="privacyForm.allowComments = !privacyForm.allowComments">
-                <div class="switch-handle"></div>
-              </div>
-            </label>
-          </div>
-          <div class="switch-group">
-            <label>
-              <span>允许下载</span>
-              <div class="switch" :class="{ active: privacyForm.allowDownload }" @click="privacyForm.allowDownload = !privacyForm.allowDownload">
-                <div class="switch-handle"></div>
-              </div>
-            </label>
-          </div>
-          <button class="save-btn" @click="savePrivacySettings">保存设置</button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showNotificationSettings" class="settings-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>通知设置</h3>
-          <span class="material-icons close-icon" @click="showNotificationSettings = false">close</span>
-        </div>
-        <div class="settings-form">
-          <div class="switch-group">
-            <label>
-              <span>点赞通知</span>
-              <div class="switch" :class="{ active: notificationForm.likes }" @click="notificationForm.likes = !notificationForm.likes">
-                <div class="switch-handle"></div>
-              </div>
-            </label>
-          </div>
-          <div class="switch-group">
-            <label>
-              <span>评论通知</span>
-              <div class="switch" :class="{ active: notificationForm.comments }" @click="notificationForm.comments = !notificationForm.comments">
-                <div class="switch-handle"></div>
-              </div>
-            </label>
-          </div>
-          <div class="switch-group">
-            <label>
-              <span>关注通知</span>
-              <div class="switch" :class="{ active: notificationForm.follows }" @click="notificationForm.follows = !notificationForm.follows">
-                <div class="switch-handle"></div>
-              </div>
-            </label>
-          </div>
-          <button class="save-btn" @click="saveNotificationSettings">保存设置</button>
         </div>
       </div>
     </div>
@@ -305,11 +241,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
+const route = useRoute()
+const { t, locale } = useI18n()
+const currentLocale = computed(() => locale.value)
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 const showSettings = ref(false)
 const showEditProfile = ref(false)
@@ -318,6 +257,8 @@ const showAvatarUpload = ref(false)
 const avatarPreview = ref('')
 const avatarFile = ref(null)
 const fileInput = ref(null)
+const showLanguageSettings = ref(false)
+const isCurrentUser = computed(() => !route.params.id || route.params.id === user.id)
 
 // 标签页配置
 const tabs = [
@@ -335,6 +276,49 @@ const userStats = ref({
 // 作品和喜欢的视频列表
 const works = ref([])
 const likedVideos = ref([])
+
+// 编辑资料表单
+const profileForm = reactive({
+  username: '',
+  bio: ''
+})
+
+// 关注/取消关注用户
+const toggleFollow = () => {
+  if (!user.isLoggedIn) {
+    router.push({
+      path: '/login',
+      query: { from: route.fullPath }
+    })
+    return
+  }
+  
+  // 更新关注状态
+  if (profileUser.value.isFollowed) {
+    profileUser.value.isFollowed = false
+    profileUser.value.stats.followers -= 1
+  } else {
+    profileUser.value.isFollowed = true
+    profileUser.value.stats.followers += 1
+  }
+}
+
+// 处理消息发送
+const handleMessage = () => {
+  if (!user.isLoggedIn) {
+    router.push({
+      path: '/login',
+      query: { from: route.fullPath }
+    })
+    return
+  }
+  
+  // 跳转到消息页面
+  router.push({
+    path: '/messages',
+    query: { userId: profileUser.value.id }
+  })
+}
 
 // 示例视频列表
 const sampleVideos = [
@@ -383,11 +367,6 @@ const setVideoRef = (el, index) => {
   }
 }
 
-const editForm = reactive({
-  username: user.username || '',
-  bio: user.bio || ''
-})
-
 const showAccountSettings = ref(false)
 const showPrivacySettings = ref(false)
 const showNotificationSettings = ref(false)
@@ -411,7 +390,7 @@ const notificationForm = reactive({
 })
 
 // 格式化数字
-const formatCount = (count) => {
+const formatNumber = (count) => {
   if (count >= 10000) {
     return (count / 10000).toFixed(1) + 'w'
   } else if (count >= 1000) {
@@ -420,160 +399,113 @@ const formatCount = (count) => {
   return count
 }
 
-// 处理头像编辑
-const handleEditAvatar = () => {
+// 处理头像点击
+const handleAvatarClick = () => {
   showAvatarUpload.value = true
+}
+
+// 触发文件选择
+const triggerFileInput = () => {
+  fileInput.value.click()
 }
 
 // 处理文件选择
 const handleFileChange = (e) => {
   const file = e.target.files[0]
   if (file) {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('图片大小不能超过5MB')
-      return
-    }
-    
     avatarFile.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      avatarPreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
+    avatarPreview.value = URL.createObjectURL(file)
   }
 }
 
 // 保存头像
-const saveAvatar = () => {
+const handleAvatarSubmit = () => {
   if (!avatarFile.value) return
   
-  // 这里应该调用后端API上传图片
-  // 这里使用模拟数据
+  // 模拟头像上传成功
+  const newAvatarUrl = avatarPreview.value
+  
+  // 更新用户对象
   const newUser = {
     ...user,
-    avatar: avatarPreview.value
+    avatar: newAvatarUrl
   }
   localStorage.setItem('user', JSON.stringify(newUser))
   
+  // 关闭弹窗
   showAvatarUpload.value = false
-  avatarFile.value = null
-  avatarPreview.value = ''
-  
-  // 刷新页面以更新头像
-  window.location.reload()
+  alert(t('profile.avatarUpdated'))
 }
 
-// 保存个人资料
-const saveProfile = () => {
-  if (!editForm.username.trim()) {
-    alert('昵称不能为空')
+// 处理资料编辑提交
+const handleProfileSubmit = () => {
+  if (!profileForm.username.trim()) {
+    alert(t('profile.usernameRequired'))
     return
   }
   
-  // 这里应该调用后端API保存资料
-  // 这里使用模拟数据
+  // 保存到本地存储
   const newUser = {
     ...user,
-    username: editForm.username,
-    bio: editForm.bio
+    username: profileForm.username,
+    bio: profileForm.bio
   }
   localStorage.setItem('user', JSON.stringify(newUser))
   
   showEditProfile.value = false
-  
-  // 刷新页面以更新资料
-  window.location.reload()
+  alert(t('profile.profileUpdated'))
 }
 
-// 处理账号设置
-const handleAccountSettings = () => {
-  showSettings.value = false
-  showAccountSettings.value = true
-}
-
-// 处理隐私设置
-const handlePrivacySettings = () => {
-  showSettings.value = false
-  showPrivacySettings.value = true
-}
-
-// 处理通知设置
-const handleNotificationSettings = () => {
-  showSettings.value = false
-  showNotificationSettings.value = true
-}
-
-// 保存账号设置
-const saveAccountSettings = () => {
-  if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmPassword) {
-    alert('两次输入的密码不一致')
-    return
-  }
-  // 这里应该调用后端API保存设置
-  alert('账号设置已保存')
-  showAccountSettings.value = false
-}
-
-// 保存隐私设置
-const savePrivacySettings = () => {
-  // 这里应该调用后端API保存设置
-  alert('隐私设置已保存')
-  showPrivacySettings.value = false
-}
-
-// 保存通知设置
-const saveNotificationSettings = () => {
-  // 这里应该调用后端API保存设置
-  alert('通知设置已保存')
-  showNotificationSettings.value = false
-}
-
-// 处理退出登录
+// 处理用户登出
 const handleLogout = () => {
   localStorage.removeItem('user')
   router.push('/login')
 }
 
-onMounted(() => {
-  // 组件加载时的其他初始化逻辑
-})
-
-const handleTouchStart = (e) => {
-  touchStartY = e.touches[0].clientY
-  hasInteracted = true
+// 处理语言设置
+const handleLanguageSettings = () => {
+  showSettings.value = false
+  showLanguageSettings.value = true
 }
 
-const handleTouchMove = (e) => {
-  touchEndY = e.touches[0].clientY
+// 切换语言
+const changeLanguage = (lang) => {
+  locale.value = lang
+  localStorage.setItem('locale', lang)
+  // 短暂延迟后关闭弹窗
+  setTimeout(() => {
+    showLanguageSettings.value = false
+  }, 300)
 }
 
-const handleTouchEnd = () => {
-  if (!hasInteracted) return
-
-  const touchDiff = touchEndY - touchStartY
-  if (touchDiff > 100) {
-    // Swipe down, next video
-    currentIndex.value = (currentIndex.value + 1) % works.value.length
-  } else if (touchDiff < -100) {
-    // Swipe up, previous video
-    currentIndex.value = (currentIndex.value - 1 + works.value.length) % works.value.length
+// 用户信息 - 如果有路由参数id，则显示该用户的信息，否则显示当前登录用户
+const profileUser = computed(() => {
+  if (route.params.id && route.params.id !== user.id) {
+    // 模拟获取其他用户信息
+    return {
+      id: route.params.id,
+      username: '用户' + route.params.id,
+      avatar: 'https://randomuser.me/api/portraits/men/' + route.params.id + '.jpg',
+      isFollowed: false,
+      bio: '这是用户' + route.params.id + '的个人简介',
+      stats: {
+        likes: Math.floor(Math.random() * 10000),
+        followers: Math.floor(Math.random() * 1000),
+        following: Math.floor(Math.random() * 500)
+      }
+    }
+  } else {
+    // 返回当前登录用户信息
+    return {
+      id: user.id || '1',
+      username: user.username || '当前用户',
+      avatar: user.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg',
+      isFollowed: false,
+      bio: '这是我的个人简介',
+      stats: userStats.value
+    }
   }
-
-  hasInteracted = false
-}
-
-const togglePlay = (index) => {
-  // Implement video play logic here
-}
-
-const handleVideoEnd = (index) => {
-  // Implement video end logic here
-}
-
-// 添加发布视频处理函数
-const handlePublish = () => {
-  router.push('/publish')
-}
+})
 
 // 处理视频点击
 const handleVideoClick = (video) => {
@@ -655,7 +587,7 @@ const handleVideoHover = (event, isHover) => {
   transform: scale(1.1);
 }
 
-.user-info {
+.profile-header {
   padding: 88px 16px 24px;
   text-align: center;
   background: linear-gradient(to bottom, rgba(212, 175, 55, 0.05), transparent);
@@ -685,30 +617,27 @@ const handleVideoHover = (event, isHover) => {
   box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
 }
 
-.edit-avatar {
+.avatar-overlay {
   position: absolute;
-  bottom: 0;
+  top: 0;
+  left: 0;
   right: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #d4af37;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 2px solid #0a0f1a;
+  background-color: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
-.edit-avatar:hover {
-  background-color: #e5c158;
-  transform: scale(1.1);
+.avatar-overlay .material-icons {
+  font-size: 48px;
+  color: #ffffff;
 }
 
-.edit-avatar .material-icons {
-  font-size: 18px;
-  color: #000000;
+.avatar-container:hover .avatar-overlay {
+  opacity: 1;
 }
 
 .username {
@@ -719,7 +648,7 @@ const handleVideoHover = (event, isHover) => {
   text-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
 }
 
-.user-id {
+.bio {
   color: rgba(255, 255, 255, 0.6);
   margin: 0 0 24px;
   font-size: 14px;
@@ -736,7 +665,7 @@ const handleVideoHover = (event, isHover) => {
   text-align: center;
 }
 
-.stat-value {
+.stat-count {
   font-size: 20px;
   font-weight: 600;
   color: #d4af37;
@@ -748,8 +677,15 @@ const handleVideoHover = (event, isHover) => {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.edit-profile {
-  display: inline-flex;
+.profile-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.action-btn {
+  display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 24px;
@@ -762,7 +698,7 @@ const handleVideoHover = (event, isHover) => {
   box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
 }
 
-.edit-profile:hover {
+.action-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
   background: linear-gradient(135deg, #e5c158, #d4af37);
@@ -801,18 +737,8 @@ const handleVideoHover = (event, isHover) => {
   border-radius: 1px;
 }
 
-.content {
+.content-area {
   padding: 16px;
-  position: relative;
-  z-index: 1;
-}
-
-.works-list {
-  min-height: calc(100vh - 300px);
-  background: linear-gradient(135deg, rgba(26, 31, 42, 0.5), rgba(10, 15, 26, 0.5));
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(212, 175, 55, 0.05);
   position: relative;
   z-index: 1;
 }
@@ -842,41 +768,11 @@ const handleVideoHover = (event, isHover) => {
   background: linear-gradient(135deg, #1f2435, #0a0f1a);
 }
 
-.video-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
 .video-preview {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: all 0.3s;
-}
-
-.video-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.3);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.video-item:hover .video-overlay {
-  opacity: 1;
-}
-
-.video-overlay .material-icons {
-  font-size: 48px;
-  color: #ffffff;
 }
 
 .video-info {
@@ -889,26 +785,9 @@ const handleVideoHover = (event, isHover) => {
   color: #ffffff;
 }
 
-.video-stats {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+.view-count {
   font-size: 14px;
-}
-
-.video-stats .material-icons {
-  font-size: 16px;
-  color: #d4af37;
-}
-
-.video-title {
-  font-size: 14px;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .empty-state {
@@ -1054,7 +933,7 @@ const handleVideoHover = (event, isHover) => {
   resize: none;
 }
 
-.save-btn {
+.submit-btn {
   width: 100%;
   padding: 12px;
   background: linear-gradient(135deg, #d4af37, #e5c158);
@@ -1067,43 +946,17 @@ const handleVideoHover = (event, isHover) => {
   transition: all 0.3s;
 }
 
-.save-btn:hover {
+.submit-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
   background: linear-gradient(135deg, #e5c158, #d4af37);
 }
 
-.save-btn:disabled {
+.submit-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
-}
-
-.switch-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(255, 215, 0, 0.1);
-}
-
-.switch-group:last-child {
-  border-bottom: none;
-}
-
-.switch-group label {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  color: #ffffff;
-}
-
-.description {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 4px 0 0;
 }
 
 .switch {
@@ -1116,134 +969,85 @@ const handleVideoHover = (event, isHover) => {
   transition: all 0.3s;
 }
 
-.switch.active {
-  background: linear-gradient(135deg, #d4af37, #e5c158);
+.switch input {
+  display: none;
 }
 
-.switch-handle {
+.switch label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px;
+}
+
+.switch label::before,
+.switch label::after {
+  content: '';
   width: 22px;
   height: 22px;
   background-color: #ffffff;
   border-radius: 50%;
   position: absolute;
-  top: 2px;
-  left: 2px;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.switch.active .switch-handle {
+.switch label::before {
+  left: 2px;
+}
+
+.switch label::after {
+  right: 2px;
+}
+
+.switch input:checked + label::before {
   transform: translateX(24px);
 }
 
-.publish-fab {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #d4af37, #e5c158);
+.switch input:checked + label::after {
+  transform: translateX(-24px);
+}
+
+.language-settings {
+  padding: 16px;
+}
+
+.language-option {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
-  z-index: 90;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.publish-fab:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 25px rgba(212, 175, 55, 0.4);
-  background: linear-gradient(135deg, #e5c158, #d4af37);
+.language-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
 }
 
-.publish-fab .material-icons {
-  font-size: 32px;
-  color: #000000;
+.language-option.active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.1));
+  border-left: 3px solid #d4af37;
 }
 
-/* 添加滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0a0f1a;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #ffd700;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #ffed4a;
-}
-
-/* 头像上传区域样式 */
-.avatar-upload {
-  padding: 20px;
-}
-
-.preview-container {
-  width: 200px;
-  height: 200px;
-  margin: 0 auto 24px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid #d4af37;
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-}
-
-.avatar-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.upload-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 300px;
-  margin: 0 auto;
-}
-
-.upload-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
-  border: 2px dashed #d4af37;
-  border-radius: 8px;
-  color: #d4af37;
+.language-name {
   font-size: 16px;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
 }
 
-.upload-btn:hover {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.08));
-  transform: translateY(-2px);
+.check-icon {
+  color: #d4af37;
 }
 
-.upload-btn .material-icons {
-  font-size: 24px;
-}
-
-@media (max-width: 768px) {
-  .video-item {
-    width: calc((100% - 12px) / 2);
-  }
-}
-
-@media (max-width: 480px) {
-  .video-item {
-    width: 100%;
-  }
+.right-icon {
+  color: rgba(255, 255, 255, 0.6);
 }
 </style> 

@@ -267,11 +267,27 @@ const handlePublish = () => {
 </script>
 
 <style scoped>
+/* 统一字体样式 */
+* {
+  font-family: "PingFang SC", "Helvetica Neue", Helvetica, "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+}
+
 .publish-container {
   min-height: 100vh;
   background-color: #0f0f0f;
   color: #ffffff;
   padding-bottom: 24px;
+}
+
+/* 统一标题样式 */
+h1, h2, h3, h4, h5 {
+  color: #d4af37;
+  font-weight: 600;
+}
+
+/* 统一表单元素样式 */
+input, textarea, select, button {
+  font-family: inherit;
 }
 
 .nav-bar {
@@ -293,7 +309,7 @@ const handlePublish = () => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background: linear-gradient(45deg, #d4af37, #e5c158);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -322,8 +338,8 @@ const handlePublish = () => {
 }
 
 .upload-box:hover {
-  border-color: #00ff87;
-  background-color: rgba(0, 255, 135, 0.05);
+  border-color: #d4af37;
+  background-color: rgba(212, 175, 55, 0.05);
 }
 
 .upload-content {
@@ -425,8 +441,8 @@ const handlePublish = () => {
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #00ff87;
-  box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
+  border-color: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
 }
 
 .form-group textarea {
@@ -488,7 +504,7 @@ const handlePublish = () => {
 }
 
 .category-item.active {
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background: linear-gradient(45deg, #d4af37, #e5c158);
   color: #000000;
   border-color: transparent;
 }
@@ -509,7 +525,7 @@ const handlePublish = () => {
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background-color: rgba(0, 255, 135, 0.1);
+  background-color: rgba(212, 175, 55, 0.1);
   border-radius: 4px;
   font-size: 14px;
 }
@@ -517,7 +533,7 @@ const handlePublish = () => {
 .tag-item .material-icons {
   font-size: 16px;
   cursor: pointer;
-  color: #00ff87;
+  color: #d4af37;
 }
 
 .tags-input input {
@@ -558,7 +574,7 @@ const handlePublish = () => {
 }
 
 .switch.active {
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background: linear-gradient(45deg, #d4af37, #e5c158);
 }
 
 .switch-handle {
@@ -579,7 +595,7 @@ const handlePublish = () => {
 .publish-btn {
   width: 100%;
   height: 48px;
-  background: linear-gradient(45deg, #00ff87, #60efff);
+  background: linear-gradient(45deg, #d4af37, #e5c158);
   color: #000000;
   border: none;
   border-radius: 24px;
@@ -591,7 +607,7 @@ const handlePublish = () => {
 
 .publish-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
 }
 
 .publish-btn:disabled {
