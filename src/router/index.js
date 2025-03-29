@@ -3,6 +3,8 @@ import ShortVideo from '../views/ShortVideo.vue'
 import Login from '../views/Login.vue'
 import Profile from '../views/Profile.vue'
 import Publish from '../views/Publish.vue'
+import Messages from '../views/Messages.vue'
+import Live from '../views/Live.vue'
 
 const routes = [
   {
@@ -31,6 +33,16 @@ const routes = [
     name: 'Publish',
     component: Publish,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/messages',
+    name: 'Messages',
+    component: Messages
+  },
+  {
+    path: '/live',
+    name: 'Live',
+    component: Live
   }
 ]
 

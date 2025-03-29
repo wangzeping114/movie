@@ -1,5 +1,19 @@
 <template>
   <div class="short-video-container">
+    <!-- SVG渐变定义 -->
+    <svg width="0" height="0" style="position: absolute;">
+      <defs>
+        <linearGradient id="gradient-normal" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(255, 255, 255, 0.9)"/>
+          <stop offset="100%" stop-color="rgba(255, 255, 255, 0.7)"/>
+        </linearGradient>
+        <linearGradient id="gradient-active" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#d4af37"/>
+          <stop offset="100%" stop-color="#e5c158"/>
+        </linearGradient>
+      </defs>
+    </svg>
+
     <!-- 搜索按钮移到顶部 -->
     <div class="top-search">
       <div class="search-btn" @click="showSearchPanel = true">
@@ -117,13 +131,17 @@
         <span class="material-icons">{{ currentTab === 'home' ? 'home' : 'home_outlined' }}</span>
         <span class="nav-label">首页</span>
       </div>
-      <div class="nav-item" :class="{ active: currentTab === 'friends' }" @click="handleTabClick('friends')">
-        <span class="material-icons">{{ currentTab === 'friends' ? 'people' : 'people_outline' }}</span>
-        <span class="nav-label">朋友</span>
+      <div class="nav-item" :class="{ active: currentTab === 'live' }" @click="handleTabClick('live')">
+        <div class="svg-icon-container" :class="{ active: currentTab === 'live' }">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="svg-icon">
+            <path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z"/>
+          </svg>
+        </div>
+        <span class="nav-label">直播</span>
       </div>
       <div class="nav-item publish-btn" @click="handlePublish">
         <span class="material-icons">add_circle</span>
-        <!-- <span class="nav-label">发布</span> -->
+        <span class="nav-label">发布</span>
       </div>
       <div class="nav-item" :class="{ active: currentTab === 'messages' }" @click="handleTabClick('messages')">
         <span class="material-icons">{{ currentTab === 'messages' ? 'chat_bubble' : 'chat_bubble_outline' }}</span>
@@ -490,8 +508,8 @@ const handleTabClick = (tab) => {
     router.push('/profile')
   } else if (tab === 'messages') {
     router.push('/messages')
-  } else if (tab === 'friends') {
-    router.push('/friends')
+  } else if (tab === 'live') {
+    router.push('/live')
   }
 }
 
@@ -813,7 +831,7 @@ const handlePublish = () => {
   left: 0;
   right: 0;
   padding: 20px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
   z-index: 10;
   opacity: 1;
   pointer-events: auto;
@@ -823,14 +841,15 @@ const handlePublish = () => {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 0 20px;
 }
 
 /* 播放按钮样式 */
 .play-pause-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -838,16 +857,17 @@ const handlePublish = () => {
   transition: all 0.2s ease;
   flex-shrink: 0;
   backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .play-pause-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
 }
 
 .play-pause-btn i {
   color: #fff;
-  font-size: 20px;
+  font-size: 24px;
   opacity: 0.9;
 }
 
@@ -881,17 +901,39 @@ const handlePublish = () => {
   top: 0;
   left: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
+  background: #d4af37;
   border-radius: 2px;
   transition: width 0.1s linear;
 }
 
 .time-display {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
   min-width: 100px;
   text-align: right;
   font-family: monospace;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 添加视频加载动画 */
+.loading-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  color: #fff;
+  font-size: 48px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 /* 底部导航栏样式 */
@@ -1142,5 +1184,58 @@ const handlePublish = () => {
   color: #fff;
   font-size: 24px;
   opacity: 0.9;
+}
+
+/* 添加自定义的文字图标样式 */
+.nav-icon-text {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  color: #0a0f1a;
+  transition: all 0.3s ease;
+}
+
+.nav-icon-text.active {
+  background: linear-gradient(180deg, #d4af37 0%, #e5c158 100%);
+  color: #000;
+}
+
+.nav-item:hover .nav-icon-text {
+  transform: scale(1.1);
+}
+
+/* 修改SVG图标样式 */
+.svg-icon-container {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.svg-icon {
+  width: 24px;
+  height: 24px;
+  fill: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+.svg-icon-container.active .svg-icon {
+  fill: #d4af37;
+}
+
+.nav-item:hover .svg-icon-container {
+  transform: scale(1.1);
+}
+
+.nav-item:hover .svg-icon {
+  fill: #e5c158;
 }
 </style> 
