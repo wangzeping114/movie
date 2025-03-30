@@ -8,11 +8,16 @@ import i18n from './i18n'
 import './assets/fonts/material-icons.css'
 import './assets/main.css'
 
+// 创建应用实例
 const app = createApp(App)
-const pinia = createPinia()
 
-app.use(router)
-app.use(i18n)
+// 在使用其他插件之前先创建并使用pinia
+const pinia = createPinia()
 app.use(pinia)
 
+// 其他插件
+app.use(router)
+app.use(i18n)
+
+// 挂载应用
 app.mount('#app')

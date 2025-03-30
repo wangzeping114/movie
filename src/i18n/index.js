@@ -16,7 +16,10 @@ const zhCN = {
     notLoggedIn: '未登录',
     login: '登录',
     logout: '退出登录',
-    register: '注册'
+    register: '注册',
+    save: '保存',
+    cancel: '取消',
+    confirm: '确认'
   },
   login: {
     title: '登录',
@@ -34,23 +37,68 @@ const zhCN = {
     loginSuccess: '登录成功',
     registerSuccess: '注册成功',
     error: '操作失败，请重试'
+  },
+  profile: {
+    title: '个人主页',
+    works: '作品',
+    likes: '喜欢',
+    followers: '粉丝',
+    following: '关注',
+    follow: '关注',
+    followed: '已关注',
+    message: '发消息',
+    editProfile: '编辑资料',
+    noWorks: '您还没有发布作品',
+    userNoWorks: '该用户还没有发布作品',
+    noLikes: '您还没有喜欢的视频',
+    userNoLikes: '该用户还没有喜欢的视频',
+    createWork: '立即发布',
+    exploreLikes: '去探索更多视频',
+    username: '用户名',
+    bio: '个人简介',
+    usernamePlaceholder: '请输入用户名',
+    bioPlaceholder: '介绍一下自己吧',
+    changeAvatar: '更换头像',
+    uploadPhoto: '上传照片',
+    avatarUpdated: '头像更新成功',
+    profileUpdated: '资料更新成功',
+    usernameRequired: '用户名不能为空'
+  },
+  settings: {
+    title: '设置',
+    darkMode: '深色模式',
+    language: '语言',
+    notifications: '通知',
+    privacy: '隐私',
+    account: '账号',
+    help: '帮助中心',
+    about: '关于我们',
+    logout: '退出登录'
   }
 }
 
+// 创建i18n实例，使用legacy模式
 const i18n = createI18n({
   legacy: false,
   locale: 'zh-CN',
   fallbackLocale: 'zh-CN',
   messages: {
     'zh-CN': zhCN
-  }
+  },
+  silentTranslationWarn: true,
+  missingWarn: false,
+  fallbackWarn: false
 })
 
-// 添加切换语言的方法
+// 导出切换语言的方法
 export const setLanguage = (locale) => {
-  i18n.global.locale.value = locale
-  localStorage.setItem('locale', locale)
-  document.querySelector('html').setAttribute('lang', locale)
+  try {
+    i18n.global.locale.value = locale
+    localStorage.setItem('locale', locale)
+    document.querySelector('html').setAttribute('lang', locale)
+  } catch (error) {
+    console.error('Error switching language:', error)
+  }
 }
 
 export default i18n 

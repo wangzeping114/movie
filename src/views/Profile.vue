@@ -73,48 +73,74 @@
       <!-- 作品列表 -->
       <div class="video-grid" v-if="currentTab === 'works'" v-show="works.length > 0">
         <div v-for="(video, index) in works" :key="index" class="video-item" @click="handleVideoClick(video)">
-          <video
-            :src="video.url"
-            class="video-preview"
-            loop
-            muted
-            @mouseenter="handleVideoHover($event, true)"
-            @mouseleave="handleVideoHover($event, false)"
-          ></video>
-          <div class="video-info">
-            <span class="view-count">{{ formatNumber(video.views) }} 次观看</span>
+          <div class="video-card">
+            <video
+              :src="video.url"
+              class="video-preview"
+              loop
+              muted
+              @mouseenter="handleVideoHover($event, true)"
+              @mouseleave="handleVideoHover($event, false)"
+            ></video>
+            <div class="video-info">
+              <div class="video-stats">
+                <span class="video-stat">
+                  <span class="material-icons">visibility</span>
+                  {{ formatNumber(video.views) }}
+                </span>
+                <span class="video-stat">
+                  <span class="material-icons">favorite</span>
+                  {{ formatNumber(video.likes || 0) }}
+                </span>
+              </div>
+              <div class="video-description" v-if="video.description">{{ video.description }}</div>
+              <div class="video-date">{{ formatDate(video.createdAt || new Date()) }}</div>
+            </div>
           </div>
         </div>
       </div>
       <div class="empty-state" v-else-if="currentTab === 'works' && works.length === 0">
         <span class="material-icons">videocam_off</span>
-        <p>{{ isCurrentUser ? t('profile.noWorks') : t('profile.userNoWorks') }}</p>
+        <p>{{ isCurrentUser ? '你还没有发布作品' : '该用户还没有发布作品' }}</p>
         <button v-if="isCurrentUser" class="action-btn" @click="router.push('/publish')">
-          {{ t('profile.createWork') }}
+          立即发布
         </button>
       </div>
 
       <!-- 喜欢的视频 -->
       <div class="video-grid" v-if="currentTab === 'likes'" v-show="likedVideos.length > 0">
         <div v-for="(video, index) in likedVideos" :key="index" class="video-item" @click="handleVideoClick(video)">
-          <video
-            :src="video.url"
-            class="video-preview"
-            loop
-            muted
-            @mouseenter="handleVideoHover($event, true)"
-            @mouseleave="handleVideoHover($event, false)"
-          ></video>
-          <div class="video-info">
-            <span class="view-count">{{ formatNumber(video.views) }} 次观看</span>
+          <div class="video-card">
+            <video
+              :src="video.url"
+              class="video-preview"
+              loop
+              muted
+              @mouseenter="handleVideoHover($event, true)"
+              @mouseleave="handleVideoHover($event, false)"
+            ></video>
+            <div class="video-info">
+              <div class="video-stats">
+                <span class="video-stat">
+                  <span class="material-icons">visibility</span>
+                  {{ formatNumber(video.views) }}
+                </span>
+                <span class="video-stat">
+                  <span class="material-icons">favorite</span>
+                  {{ formatNumber(video.likes || 0) }}
+                </span>
+              </div>
+              <div class="video-author" v-if="video.authorName">{{ video.authorName }}</div>
+              <div class="video-description" v-if="video.description">{{ video.description }}</div>
+            </div>
           </div>
         </div>
       </div>
       <div class="empty-state" v-else-if="currentTab === 'likes' && likedVideos.length === 0">
         <span class="material-icons">favorite_border</span>
-        <p>{{ isCurrentUser ? t('profile.noLikes') : t('profile.userNoLikes') }}</p>
+        <p>{{ isCurrentUser ? '你还没有喜欢的视频' : '该用户还没有喜欢的视频' }}</p>
         <button v-if="isCurrentUser" class="action-btn" @click="router.push('/short-video')">
-          {{ t('profile.exploreLikes') }}
+          去探索更多视频
         </button>
       </div>
     </div>
@@ -193,44 +219,49 @@
     <div v-if="showAvatarUpload" class="settings-modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>{{ t('profile.changeAvatar') }}</h3>
+          <h3>更换头像</h3>
           <span class="material-icons close-icon" @click="showAvatarUpload = false">close</span>
         </div>
         <div class="avatar-upload">
-          <div class="avatar-preview">
-            <img :src="avatarPreview || profileUser.avatar" alt="Avatar Preview">
+          <div class="avatar-preview-container">
+            <img :src="avatarPreview || profileUser.avatar" alt="Avatar Preview" class="avatar-preview-img">
+            <div class="avatar-overlay-preview" @click="triggerFileInput">
+              <span class="material-icons upload-icon">photo_camera</span>
+              <span class="upload-text">点击更换</span>
+            </div>
           </div>
+          <input type="file" ref="fileInput" style="display: none;" accept="image/*" @change="handleFileChange">
           <div class="upload-actions">
-            <button class="upload-btn" @click="triggerFileInput">
-              <span class="material-icons">upload</span>
-              {{ t('profile.uploadPhoto') }}
+            <button class="cancel-btn" @click="showAvatarUpload = false">
+              取消
             </button>
-            <input type="file" ref="fileInput" style="display: none;" accept="image/*" @change="handleFileChange">
             <button class="submit-btn" :disabled="!avatarFile" @click="handleAvatarSubmit">
-              {{ t('common.save') }}
+              保存
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 添加语言设置弹窗 -->
+    <!-- 语言设置弹窗 -->
     <div v-if="showLanguageSettings" class="settings-modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>{{ t('settings.language') }}</h3>
+          <h3>语言设置</h3>
           <span class="material-icons close-icon" @click="showLanguageSettings = false">close</span>
         </div>
         <div class="language-settings">
           <div class="language-option" 
                :class="{ active: currentLocale === 'zh-CN' }"
                @click="changeLanguage('zh-CN')">
-            <span class="language-name">中文</span>
+            <div class="language-flag">🇨🇳</div>
+            <span class="language-name">简体中文</span>
             <span class="material-icons check-icon" v-if="currentLocale === 'zh-CN'">check_circle</span>
           </div>
           <div class="language-option"
                :class="{ active: currentLocale === 'en-US' }"
                @click="changeLanguage('en-US')">
+            <div class="language-flag">🇺🇸</div>
             <span class="language-name">English</span>
             <span class="material-icons check-icon" v-if="currentLocale === 'en-US'">check_circle</span>
           </div>
@@ -389,14 +420,58 @@ const notificationForm = reactive({
   follows: true
 })
 
-// 格式化数字
-const formatNumber = (count) => {
-  if (count >= 10000) {
-    return (count / 10000).toFixed(1) + 'w'
-  } else if (count >= 1000) {
-    return (count / 1000).toFixed(1) + 'k'
+// 工具函数：格式化数字
+const formatNumber = (num) => {
+  if (num === undefined || num === null) return '0';
+  
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M'
   }
-  return count
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K'
+  }
+  return num.toString()
+}
+
+// 格式化日期函数
+const formatDate = (date) => {
+  if (!date) return ''
+  
+  const now = new Date()
+  const inputDate = new Date(date)
+  
+  // 计算时间差（毫秒）
+  const diff = now.getTime() - inputDate.getTime()
+  
+  // 小于1分钟
+  if (diff < 60 * 1000) {
+    return '刚刚'
+  }
+  
+  // 小于1小时
+  if (diff < 60 * 60 * 1000) {
+    const minutes = Math.floor(diff / (60 * 1000))
+    return `${minutes}分钟前`
+  }
+  
+  // 小于24小时
+  if (diff < 24 * 60 * 60 * 1000) {
+    const hours = Math.floor(diff / (60 * 60 * 1000))
+    return `${hours}小时前`
+  }
+  
+  // 小于7天
+  if (diff < 7 * 24 * 60 * 60 * 1000) {
+    const days = Math.floor(diff / (24 * 60 * 60 * 1000))
+    return `${days}天前`
+  }
+  
+  // 显示日期
+  const year = inputDate.getFullYear()
+  const month = String(inputDate.getMonth() + 1).padStart(2, '0')
+  const day = String(inputDate.getDate()).padStart(2, '0')
+  
+  return `${year}-${month}-${day}`
 }
 
 // 处理头像点击
@@ -501,8 +576,12 @@ const profileUser = computed(() => {
       username: user.username || '当前用户',
       avatar: user.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg',
       isFollowed: false,
-      bio: '这是我的个人简介',
-      stats: userStats.value
+      bio: user.bio || '这是我的个人简介',
+      stats: userStats.value || {
+        likes: 0,
+        followers: 0,
+        following: 0
+      }
     }
   }
 })
@@ -745,86 +824,211 @@ const handleVideoHover = (event, isHover) => {
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
-  padding: 20px;
-  width: 100%;
+  padding: 16px;
 }
 
 .video-item {
+  cursor: pointer;
   position: relative;
-  width: 100%;
-  padding-bottom: 56.25%; /* 16:9 横屏比例 */
-  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
 .video-item:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.video-item video {
-  position: absolute;
-  top: 0;
-  left: 0;
+.video-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-preview {
+  width: 100%;
+  aspect-ratio: 9/16;
+  object-fit: cover;
+  background-color: #000;
+}
+
+.video-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.video-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.video-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.video-stat .material-icons {
+  font-size: 14px;
+}
+
+.video-description {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.video-author {
+  font-size: 12px;
+  font-weight: 600;
+  color: #d4af37;
+}
+
+.video-date {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* 头像上传样式 */
+.avatar-preview-container {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 24px;
+  position: relative;
+  border: 3px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.avatar-preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 12px;
 }
 
-.video-item .video-info {
+.avatar-overlay-preview {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
-  padding: 12px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-  color: #fff;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.video-item .video-info i {
-  font-size: 16px;
-}
-
-/* 响应式布局 */
-@media (max-width: 768px) {
-  .video-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .video-grid {
-    grid-template-columns: repeat(1, 1fr);
-    gap: 16px;
-    padding: 12px;
-  }
-}
-
-.empty-state {
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 200px;
-  color: rgba(255, 255, 255, 0.6);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
 }
 
-.empty-state .material-icons {
-  font-size: 48px;
-  margin-bottom: 16px;
-  color: rgba(255, 255, 255, 0.3);
+.avatar-preview-container:hover .avatar-overlay-preview {
+  opacity: 1;
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: #fff;
+}
+
+.upload-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.cancel-btn, .submit-btn {
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.submit-btn {
+  background: linear-gradient(45deg, #d4af37, #e5c158);
+  color: #000;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 语言设置样式 */
+.language-settings {
+  padding: 16px;
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 8px;
+}
+
+.language-option:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.language-option.active {
+  background-color: rgba(212, 175, 55, 0.1);
+}
+
+.language-flag {
+  font-size: 20px;
+  margin-right: 12px;
+}
+
+.language-name {
+  flex: 1;
+  font-size: 16px;
+}
+
+.check-icon {
+  color: #d4af37;
 }
 
 .settings-modal {
