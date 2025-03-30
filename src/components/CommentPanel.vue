@@ -4,7 +4,7 @@
       <!-- 头部 -->
       <div class="panel-header">
         <span class="title">{{ commentCount }}条评论</span>
-        <span class="close-btn material-icons" @click="closePanel">close</span>
+        <span class="close-btn material-icons" @click="closePanel($event)">close</span>
       </div>
 
       <!-- 评论列表 -->
@@ -24,7 +24,7 @@
               <div class="text">{{ comment.content }}</div>
               <div class="meta">
                 <span class="time">{{ comment.time }}</span>
-                <span class="reply-btn" @click="handleReply(comment)">回复</span>
+                <span class="reply-btn" @click="handleReply(comment, null, $event)">回复</span>
               </div>
               <!-- 回复列表 -->
               <div class="replies" v-if="comment.replies && comment.replies.length > 0">
@@ -33,7 +33,7 @@
                   <div class="reply-text">{{ reply.content }}</div>
                   <div class="reply-meta">
                     <span class="time">{{ reply.time }}</span>
-                    <span class="reply-btn" @click="handleReply(reply, comment)">回复</span>
+                    <span class="reply-btn" @click="handleReply(reply, comment, $event)">回复</span>
                   </div>
                 </div>
               </div>
@@ -46,7 +46,7 @@
                   'liked': comment.isLiked,
                   'like-animation': comment.isAnimating 
                 }" 
-                @click="toggleLike(comment)"
+                @click="toggleLike(comment, $event)"
               >
                 {{ comment.isLiked ? 'favorite' : 'favorite_border' }}
               </span>
@@ -156,13 +156,23 @@ const placeholder = computed(() => {
   return '说点什么...'
 })
 
-const closePanel = () => {
+const closePanel = (event) => {
+  // 阻止事件冒泡，防止触发视频切换
+  if (event) {
+    event.stopPropagation()
+  }
+  
   emit('update:modelValue', false)
   replyTo.value = null
   commentText.value = ''
 }
 
-const handleReply = (comment, parentComment = null) => {
+const handleReply = (comment, parentComment = null, event) => {
+  // 阻止事件冒泡，防止触发视频切换
+  if (event) {
+    event.stopPropagation()
+  }
+  
   replyTo.value = comment
   // 自动聚焦输入框
   document.querySelector('.comment-input input').focus()
@@ -218,7 +228,12 @@ const formatLikeCount = (count) => {
   return count
 }
 
-const toggleLike = (comment) => {
+const toggleLike = (comment, event) => {
+  // 阻止事件冒泡，防止触发视频切换
+  if (event) {
+    event.stopPropagation()
+  }
+  
   // 如果正在动画中，不响应点击
   if (comment.isAnimating) return
 

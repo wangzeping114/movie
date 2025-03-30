@@ -6,7 +6,6 @@ import Publish from '../views/Publish.vue'
 import Messages from '../views/Messages.vue'
 import Live from '../views/Live.vue'
 import LiveView from '../views/LiveView.vue'
-import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
 import Settings from '../views/Settings.vue'
 import About from '../views/About.vue'
@@ -21,6 +20,12 @@ const routes = [
     path: '/short-video',
     name: 'ShortVideo',
     component: ShortVideo
+  },
+  {
+    path: '/s/:id',
+    name: 'SharedVideo',
+    component: ShortVideo,
+    props: true
   },
   {
     path: '/login',
@@ -65,11 +70,6 @@ const routes = [
     path: '/live/:id',
     name: 'LiveView',
     component: LiveView
-  },
-  {
-    path: '/home',
-    name: 'home',
-    component: HomeView
   },
   {
     path: '/chat/:id',
