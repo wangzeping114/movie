@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "country-flag-icons": "^1.5.18",
+    "pinia": "^3.0.1",
+    "uuid": "^11.1.0",
     "vue": "^3.3.4",
-    "vue-i18n": "^12.0.0-alpha.2",
+    "vue-i18n": "^9.14.3",
     "vue-router": "^4.2.4"
   },
   "devDependencies": {

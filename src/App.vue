@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { RouterView } from 'vue-router'
 import PageTransition from './components/PageTransition.vue'
+import UploadIndicator from './components/UploadIndicator.vue'
 
 const router = useRouter()
 
@@ -17,6 +18,9 @@ onMounted(() => {
     <!-- <PageTransition :enable-swipe-back="false"> -->
       <RouterView />
     <!-- </PageTransition> -->
+    
+    <!-- 全局上传指示器 -->
+    <UploadIndicator />
   </div>
 </template>
 
