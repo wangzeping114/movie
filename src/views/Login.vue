@@ -83,11 +83,19 @@
         </div>
       </div>
     </div>
+    
+    <!-- 添加自定义Toast提示 -->
+    <Transition name="toast-fade">
+      <div v-if="toast.show" class="custom-toast" :class="toast.type">
+        <i class="material-icons toast-icon">{{ toast.icon }}</i>
+        <span class="toast-message">{{ toast.message }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLanguage } from '../i18n'
@@ -100,6 +108,15 @@ const currentLanguage = ref(localStorage.getItem('language') || 'zh-CN')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const showLanguageDropdown = ref(false)
+
+// 添加Toast状态
+const toast = reactive({
+  show: false,
+  message: '',
+  type: 'info', // info, success, error, warning
+  icon: 'info',
+  timer: null
+})
 
 const languages = [
   { code: 'zh-CN', name: '简体中文' },
@@ -114,6 +131,36 @@ const form = reactive({
   password: '',
   confirmPassword: ''
 })
+
+// 显示Toast提示
+const showToast = (message, type = 'info', duration = 2000) => {
+  if (toast.timer) {
+    clearTimeout(toast.timer)
+  }
+  
+  // 设置图标
+  let icon = 'info'
+  switch (type) {
+    case 'success':
+      icon = 'check_circle'
+      break
+    case 'error':
+      icon = 'error'
+      break
+    case 'warning':
+      icon = 'warning'
+      break
+  }
+  
+  toast.message = message
+  toast.type = type
+  toast.icon = icon
+  toast.show = true
+  
+  toast.timer = setTimeout(() => {
+    toast.show = false
+  }, duration)
+}
 
 const getFlagUrl = (code) => {
   const countryCode = code.split('-')[1].toLowerCase()
@@ -142,7 +189,7 @@ const toggleMode = () => {
 
 const handleSubmit = async () => {
   if (!isLogin.value && form.password !== form.confirmPassword) {
-    alert(t('login.passwordMismatch'))
+    showToast(t('login.passwordMismatch'), 'error')
     return
   }
 
@@ -156,13 +203,16 @@ const handleSubmit = async () => {
       isLoggedIn: true
     }))
     
-    alert(isLogin.value ? t('login.loginSuccess') : t('login.registerSuccess'))
+    showToast(isLogin.value ? t('login.loginSuccess') : t('login.registerSuccess'), 'success')
     
-    const from = router.currentRoute.value.query.from || '/short-video'
-    router.push(from)
+    // 延迟导航，让用户能看到成功提示
+    setTimeout(() => {
+      const from = router.currentRoute.value.query.from || '/short-video'
+      router.push(from)
+    }, 1000)
   } catch (error) {
     console.error('Login error:', error)
-    alert(t('login.error'))
+    showToast(t('login.error'), 'error')
   } finally {
     isLoading.value = false
   }
@@ -190,6 +240,9 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', closeDropdown)
   document.removeEventListener('touchstart', preventDoubleTapZoom)
+  if (toast.timer) {
+    clearTimeout(toast.timer)
+  }
 })
 </script>
 
@@ -659,5 +712,79 @@ onUnmounted(() => {
 
 .switch-link:active {
   transform: translateY(0);
+}
+
+/* 添加自定义Toast样式 */
+.custom-toast {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 50px;
+  background: rgba(26, 31, 42, 0.95);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 200px;
+  max-width: 80%;
+  justify-content: center;
+}
+
+.toast-icon {
+  font-size: 20px;
+}
+
+.toast-message {
+  font-weight: 500;
+}
+
+.custom-toast.success {
+  border-left: 3px solid #4CAF50;
+}
+
+.custom-toast.success .toast-icon {
+  color: #4CAF50;
+}
+
+.custom-toast.error {
+  border-left: 3px solid #F44336;
+}
+
+.custom-toast.error .toast-icon {
+  color: #F44336;
+}
+
+.custom-toast.warning {
+  border-left: 3px solid #FFC107;
+}
+
+.custom-toast.warning .toast-icon {
+  color: #FFC107;
+}
+
+.custom-toast.info {
+  border-left: 3px solid #2196F3;
+}
+
+.custom-toast.info .toast-icon {
+  color: #2196F3;
+}
+
+/* Toast动画 */
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -20px);
 }
 </style> 

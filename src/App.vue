@@ -15,7 +15,7 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
-    <template v-if="$route.path === '/short-video'">
+    <template v-if="$route.path === '/short-video' || $route.path === '/login'">
       <RouterView />
     </template>
     <template v-else>
