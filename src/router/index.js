@@ -10,6 +10,7 @@ import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
 import Settings from '../views/Settings.vue'
 import About from '../views/About.vue'
+import FollowList from '../views/FollowList.vue'
 
 const routes = [
   {
@@ -36,6 +37,12 @@ const routes = [
     path: '/user/:id',
     name: 'UserProfile',
     component: Profile,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/follow/:id?',
+    name: 'FollowList',
+    component: FollowList,
     meta: { requiresAuth: true }
   },
   {

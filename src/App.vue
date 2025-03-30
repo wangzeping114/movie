@@ -15,7 +15,7 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
-    <!-- <PageTransition :enable-swipe-back="false"> -->
+    <!-- <PageTransition :enable-swipe-back="true"> -->
       <RouterView />
     <!-- </PageTransition> -->
     

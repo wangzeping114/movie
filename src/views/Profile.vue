@@ -5,7 +5,7 @@
 
     <!-- 导航栏 -->
     <div class="nav-bar">
-      <div class="back-btn" @click="router.back()">
+      <div class="back-btn" @click="router.push('/short-video')">
         <span class="material-icons">arrow_back</span>
       </div>
       <h1>{{ isCurrentUser ? t('profile.title') : profileUser.username }}</h1>
@@ -30,11 +30,11 @@
           <span class="stat-count">{{ formatNumber(profileUser.stats.likes) }}</span>
           <span class="stat-label">{{ t('profile.likes') }}</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item clickable" @click="goToFollowers(profileUser.id)">
           <span class="stat-count">{{ formatNumber(profileUser.stats.followers) }}</span>
           <span class="stat-label">{{ t('profile.followers') }}</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item clickable" @click="goToFollowing(profileUser.id)">
           <span class="stat-count">{{ formatNumber(profileUser.stats.following) }}</span>
           <span class="stat-label">{{ t('profile.following') }}</span>
         </div>
@@ -596,6 +596,52 @@ const handleVideoHover = (event, isHover) => {
     video.currentTime = 0
   }
 }
+
+// 处理粉丝跳转
+const goToFollowers = (userId) => {
+  if (!user.isLoggedIn) {
+    router.push({
+      path: '/login',
+      query: { from: route.fullPath }
+    })
+    return
+  }
+  
+  if (isCurrentUser.value) {
+    router.push({
+      path: '/follow',
+      query: { tab: 'followers' }
+    })
+  } else {
+    router.push({
+      path: `/follow/${userId}`,
+      query: { tab: 'followers' }
+    })
+  }
+}
+
+// 处理关注跳转
+const goToFollowing = (userId) => {
+  if (!user.isLoggedIn) {
+    router.push({
+      path: '/login',
+      query: { from: route.fullPath }
+    })
+    return
+  }
+  
+  if (isCurrentUser.value) {
+    router.push({
+      path: '/follow',
+      query: { tab: 'following' }
+    })
+  } else {
+    router.push({
+      path: `/follow/${userId}`,
+      query: { tab: 'following' }
+    })
+  }
+}
 </script>
 
 <style scoped>
@@ -735,7 +781,35 @@ const handleVideoHover = (event, isHover) => {
 }
 
 .stat-item {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.stat-item.clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.stat-item.clickable:active {
+  opacity: 0.7;
+}
+
+.stat-item.clickable::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background-color: #d4af37;
+  transition: width 0.3s ease;
+}
+
+.stat-item.clickable:hover::after {
+  width: 70%;
 }
 
 .stat-count {
