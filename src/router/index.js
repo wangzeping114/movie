@@ -8,6 +8,8 @@ import Live from '../views/Live.vue'
 import LiveView from '../views/LiveView.vue'
 import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
+import Settings from '../views/Settings.vue'
+import About from '../views/About.vue'
 
 const routes = [
   {
@@ -66,6 +68,20 @@ const routes = [
     path: '/chat/:id',
     name: 'chat',
     component: ChatView
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About,
+    meta: {
+      requiresAuth: true
+    }
   }
 ]
 
