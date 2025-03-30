@@ -74,7 +74,14 @@ const routes = [
   {
     path: '/chat/:id',
     name: 'chat',
-    component: ChatView
+    component: ChatView,
+    meta: { noSwipe: true }
+  },
+  {
+    path: '/chat/new',
+    name: 'newChat',
+    component: ChatView,
+    meta: { isNewChat: true, noSwipe: true }
   },
   {
     path: '/settings',

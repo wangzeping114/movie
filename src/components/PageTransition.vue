@@ -42,6 +42,11 @@ const props = defineProps({
       '/publish',
       '/user'
     ]
+  },
+  // 是否尊重路由的meta.noSwipe设置
+  respectRouteMeta: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -69,9 +74,15 @@ const rightArrowOpacity = computed(() => {
 
 // 检查当前路由是否需要禁用滑动
 const isSwipeDisabled = computed(() => {
-  return props.disableSwipeRoutes.some(route => 
+  // 检查路由元数据中是否设置了noSwipe
+  const metaDisabled = props.respectRouteMeta && currentRoute.value.meta.noSwipe === true
+  
+  // 检查路径是否在禁用列表中
+  const pathDisabled = props.disableSwipeRoutes.some(route => 
     currentRoute.value.path.startsWith(route)
   )
+  
+  return metaDisabled || pathDisabled
 })
 
 const handleTouchStart = (e) => {

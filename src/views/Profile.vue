@@ -337,10 +337,13 @@ const handleMessage = () => {
     return
   }
   
-  // 跳转到消息页面
+  // 跳转到聊天页面而不是消息列表
   router.push({
-    path: '/messages',
-    query: { userId: profileUser.value.id }
+    path: `/chat/${profileUser.value.id}`,
+    query: { 
+      username: profileUser.value.username,
+      avatar: profileUser.value.avatar
+    }
   })
 }
 
@@ -1181,6 +1184,7 @@ const goToFollowing = (userId) => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
 }
 
 .modal-content {
@@ -1188,48 +1192,55 @@ const goToFollowing = (userId) => {
   border-radius: 16px;
   width: 90%;
   max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
   padding: 24px;
   border: 1px solid rgba(212, 175, 55, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(212, 175, 55, 0.05);
   position: relative;
   z-index: 1001;
+  margin: auto;
+  transform: translateY(0);
+  animation: modal-in 0.3s ease-out;
 }
 
-.modal-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.05), transparent);
-  border-radius: 16px;
-  pointer-events: none;
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
 }
 
 .modal-header h3 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #ffd700;
+  color: #d4af37;
+  font-size: 18px;
   margin: 0;
 }
 
 .close-icon {
-  color: #ffd700;
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  transition: all 0.3s;
+  font-size: 24px;
+  transition: color 0.2s, transform 0.2s;
 }
 
 .close-icon:hover {
-  color: #ffed4a;
-  transform: rotate(90deg);
+  color: #d4af37;
+  transform: scale(1.1);
 }
 
 .settings-list {
@@ -1260,158 +1271,68 @@ const goToFollowing = (userId) => {
   color: #ff3333;
 }
 
+.edit-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .form-group {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #ffd700;
   font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
 }
 
 .form-group input,
 .form-group textarea {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.05), rgba(212, 175, 55, 0.02));
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(212, 175, 55, 0.1);
   border-radius: 8px;
-  color: #ffffff;
+  padding: 12px 16px;
+  color: #fff;
   font-size: 14px;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #d4af37;
-  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.05));
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
 }
 
-.form-group textarea {
-  height: 100px;
-  resize: none;
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .submit-btn {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #d4af37, #e5c158);
-  color: #000000;
+  background: linear-gradient(45deg, #d4af37, #e5c158);
+  color: #000;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+  align-self: center;
 }
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
-  background: linear-gradient(135deg, #e5c158, #d4af37);
-}
-
-.submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.switch {
-  width: 50px;
-  height: 26px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
-  border-radius: 13px;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.switch input {
-  display: none;
-}
-
-.switch label {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px;
-}
-
-.switch label::before,
-.switch label::after {
-  content: '';
-  width: 22px;
-  height: 22px;
-  background-color: #ffffff;
-  border-radius: 50%;
-  position: absolute;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.switch label::before {
-  left: 2px;
-}
-
-.switch label::after {
-  right: 2px;
-}
-
-.switch input:checked + label::before {
-  transform: translateX(24px);
-}
-
-.switch input:checked + label::after {
-  transform: translateX(-24px);
-}
-
-.language-settings {
-  padding: 16px;
-}
-
-.language-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  transition: all 0.3s;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.language-option:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(4px);
-}
-
-.language-option.active {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.1));
-  border-left: 3px solid #d4af37;
-}
-
-.language-name {
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.check-icon {
-  color: #d4af37;
-}
-
-.right-icon {
-  color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 </style> 

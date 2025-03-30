@@ -92,6 +92,18 @@
                   </div>
                 </div>
               </template>
+              <!-- 语音消息 -->
+              <template v-else-if="message.type === 'voice'">
+                <div class="voice-message" @click="playVoice(message)" :class="{ 'playing': playingVoiceId === message.id }">
+                  <div class="voice-message-icon">
+                    <i class="material-icons">{{ playingVoiceId === message.id ? 'pause' : 'play_arrow' }}</i>
+                  </div>
+                  <div class="voice-message-duration">{{ message.duration || '0:00' }}</div>
+                  <div class="voice-wave-container">
+                    <div class="voice-wave" v-for="i in 4" :key="i"></div>
+                  </div>
+                </div>
+              </template>
             </div>
             <div class="message-time">{{ message.time }}</div>
           </div>
@@ -102,7 +114,7 @@
     <!-- 输入区域 -->
     <div class="input-area">
       <div class="input-wrapper">
-        <div class="input-actions">
+        <div class="input-actions" v-if="!isVoiceMode">
           <i class="material-icons action-icon" @click="showEmojiPicker = true">emoji_emotions</i>
           <label class="action-icon">
             <i class="material-icons">image</i>
@@ -116,12 +128,49 @@
           </label>
         </div>
         <input 
+          v-if="!isVoiceMode"
           type="text" 
           v-model="inputMessage" 
           placeholder="输入消息..." 
           @keyup.enter="sendMessage"
         >
-        <i class="material-icons send-btn" @click="sendMessage">send</i>
+        <div 
+          v-else 
+          class="voice-record-btn" 
+          @touchstart.prevent="startRecording" 
+          @touchend.prevent="stopRecording"
+          @touchmove.prevent="handleTouchMove"
+          @touchcancel.prevent="cancelRecording"
+          @mousedown.prevent="startRecording" 
+          @mouseup.prevent="stopRecording"
+          @mouseleave.prevent="cancelRecording"
+        >
+          {{ isRecording ? '松开发送，上滑取消' : '按住 说话' }}
+        </div>
+        
+        <!-- 按钮区域 -->
+        <div v-if="!isVoiceMode && inputMessage.trim()" class="send-btn-container">
+          <i class="material-icons send-btn" @click="sendMessage">send</i>
+        </div>
+        <div v-else-if="!isVoiceMode" class="voice-toggle-btn" @click="toggleVoiceInput">
+          <i class="material-icons">mic</i>
+        </div>
+        <div v-else class="voice-toggle-btn active" @click="toggleVoiceInput">
+          <i class="material-icons">keyboard</i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 录音反馈 -->
+    <div class="voice-record-feedback" v-if="isRecording">
+      <div class="voice-record-panel" :class="{ 'cancelling': isCancelling }">
+        <i class="material-icons record-icon" :class="{ 'recording': isRecording }">{{ isCancelling ? 'delete' : 'mic' }}</i>
+        <div class="record-wave-container" v-if="!isCancelling">
+          <div class="record-wave" v-for="(level, index) in voiceWaveLevels" :key="index" :style="{ height: level + 'px' }"></div>
+        </div>
+        <div class="record-time">{{ formatRecordTime(recordDuration) }}</div>
+        <div class="record-tip" v-if="!isCancelling">松开发送，上滑取消</div>
+        <div class="record-cancel-tip" v-else>松开手指，取消发送</div>
       </div>
     </div>
 
@@ -234,6 +283,20 @@ const isVideoFullscreen = ref(false)
 const fullscreenVideo = ref(null)
 const activeVideoPlayer = ref(null)
 const isPlaying = ref(false)
+
+// 语音消息相关状态
+const isVoiceMode = ref(false)
+const isRecording = ref(false)
+const isCancelling = ref(false)
+const recordStartTime = ref(0)
+const recordDuration = ref(0)
+const recordTimer = ref(null)
+const mediaRecorder = ref(null)
+const audioChunks = ref([])
+const playingVoiceId = ref(null)
+const audioPlayer = ref(new Audio())
+const voiceWaveLevels = ref(Array(10).fill(5))
+const voiceAnimationTimer = ref(null)
 
 // 模拟当前聊天对象
 const currentChat = ref({
@@ -586,6 +649,259 @@ const toggleFullscreen = async () => {
   }
 }
 
+// 切换语音输入模式
+const toggleVoiceInput = () => {
+  isVoiceMode.value = !isVoiceMode.value
+}
+
+// 开始录音
+const startRecording = async (event) => {
+  // 阻止默认行为，防止页面滚动
+  if (event) {
+    event.preventDefault()
+  }
+  
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      
+      // 创建音频上下文用于可视化
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      const audioSource = audioContext.createMediaStreamSource(stream)
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 256
+      audioSource.connect(analyser)
+      
+      // 设置动画
+      const animationInterval = setInterval(() => {
+        const dataArray = new Uint8Array(analyser.frequencyBinCount)
+        analyser.getByteFrequencyData(dataArray)
+        
+        // 更新声波可视化
+        voiceWaveLevels.value = Array.from({length: 10}, (_, i) => {
+          // 采样一些频率来生成波形
+          const index = Math.floor(i * 5)
+          // 将0-255的值映射到5-20的范围
+          return 5 + (dataArray[index] / 255) * 15
+        })
+      }, 100)
+      
+      // 保存音频上下文用于之后清理
+      audioContext.resume()
+      
+      // 创建并配置MediaRecorder
+      mediaRecorder.value = new MediaRecorder(stream)
+      audioChunks.value = []
+      
+      mediaRecorder.value.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunks.value.push(e.data)
+        }
+      }
+      
+      // 开始录音
+      mediaRecorder.value.start()
+      isRecording.value = true
+      isCancelling.value = false
+      recordStartTime.value = Date.now()
+      
+      // 保存清理函数
+      recordTimer.value = setInterval(() => {
+        recordDuration.value = Math.floor((Date.now() - recordStartTime.value) / 1000)
+      }, 1000)
+      
+      // 保存动画间隔引用
+      voiceAnimationTimer.value = animationInterval
+      
+    } else {
+      alert('您的浏览器不支持录音功能')
+    }
+  } catch (error) {
+    console.error('录音失败:', error)
+    alert('无法启动录音: ' + error.message)
+    isRecording.value = false
+  }
+}
+
+// 停止录音并发送
+const stopRecording = async () => {
+  if (!isRecording.value || !mediaRecorder.value) return
+  
+  // 如果是滑动取消的，不发送
+  if (isCancelling.value) {
+    cancelRecording()
+    return
+  }
+  
+  try {
+    // 结束录音
+    mediaRecorder.value.stop()
+    clearInterval(recordTimer.value)
+    clearInterval(voiceAnimationTimer.value)
+    
+    // 等待录音数据
+    await new Promise(resolve => {
+      mediaRecorder.value.onstop = async () => {
+        // 如果录音时间太短（小于1秒）
+        if (recordDuration.value < 1) {
+          // 振动反馈
+          if (navigator.vibrate) {
+            navigator.vibrate(30)
+          }
+          
+          // 显示提示并取消录音
+          alert('录音时间太短')
+          resetRecordingState()
+          return
+        }
+        
+        // 振动反馈
+        if (navigator.vibrate) {
+          navigator.vibrate([20, 30, 20])
+        }
+        
+        // 创建音频文件
+        const audioBlob = new Blob(audioChunks.value, { type: 'audio/webm' })
+        const audioUrl = URL.createObjectURL(audioBlob)
+        
+        // 发送语音消息
+        const newMessage = {
+          id: Date.now(),
+          content: audioUrl,
+          time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          isSent: true,
+          type: 'voice',
+          duration: formatRecordTime(recordDuration.value)
+        }
+        
+        messages.value.push(newMessage)
+        resetRecordingState()
+        
+        // 滚动到底部
+        await nextTick()
+        scrollToBottom()
+        
+        resolve()
+      }
+    })
+  } catch (error) {
+    console.error('处理录音失败:', error)
+    resetRecordingState()
+  }
+}
+
+// 取消录音
+const cancelRecording = () => {
+  if (!isRecording.value || !mediaRecorder.value) return
+  
+  try {
+    // 振动反馈
+    if (navigator.vibrate) {
+      navigator.vibrate([10, 20, 30])
+    }
+    
+    mediaRecorder.value.stop()
+    resetRecordingState()
+  } catch (error) {
+    console.error('取消录音失败:', error)
+    resetRecordingState()
+  }
+}
+
+// 重置录音状态
+const resetRecordingState = () => {
+  isRecording.value = false
+  isCancelling.value = false
+  recordDuration.value = 0
+  
+  // 清除定时器
+  if (recordTimer.value) {
+    clearInterval(recordTimer.value)
+    recordTimer.value = null
+  }
+  
+  if (voiceAnimationTimer.value) {
+    clearInterval(voiceAnimationTimer.value)
+    voiceAnimationTimer.value = null
+  }
+  
+  // 停止所有音轨
+  if (mediaRecorder.value && mediaRecorder.value.stream) {
+    mediaRecorder.value.stream.getTracks().forEach(track => track.stop())
+  }
+  
+  // 释放资源
+  mediaRecorder.value = null
+  audioChunks.value = []
+}
+
+// 处理触摸移动（滑动取消）
+const handleTouchMove = (event) => {
+  if (!isRecording.value) return
+  
+  const touch = event.touches[0]
+  const touchY = touch.clientY
+  
+  // 获取按钮的位置信息
+  const btnRect = event.target.getBoundingClientRect()
+  const startY = btnRect.top + btnRect.height / 2
+  
+  // 计算滑动距离（向上为负值）
+  const distanceY = touchY - startY
+  
+  // 如果向上滑动超过50px，进入取消模式
+  if (distanceY < -50) {
+    if (!isCancelling.value) {
+      // 触发振动反馈（如果设备支持）
+      if (navigator.vibrate) {
+        navigator.vibrate(10)
+      }
+    }
+    isCancelling.value = true
+  } else {
+    isCancelling.value = false
+  }
+}
+
+// 格式化录音时间
+const formatRecordTime = (seconds) => {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+}
+
+// 播放语音消息
+const playVoice = (message) => {
+  if (playingVoiceId.value === message.id) {
+    // 如果当前正在播放，则暂停
+    audioPlayer.value.pause()
+    playingVoiceId.value = null
+  } else {
+    // 如果播放其他语音，先停止当前播放
+    audioPlayer.value.pause()
+    
+    // 播放新语音
+    audioPlayer.value.src = message.content
+    audioPlayer.value.play()
+    playingVoiceId.value = message.id
+    
+    // 监听播放结束
+    audioPlayer.value.onended = () => {
+      playingVoiceId.value = null
+    }
+  }
+}
+
+// 模拟声波动画
+const animateVoiceWaves = () => {
+  voiceAnimationTimer.value = setInterval(() => {
+    voiceWaveLevels.value = voiceWaveLevels.value.map(() => {
+      // 生成随机高度（模拟声波）
+      return Math.floor(Math.random() * 15) + 5
+    })
+  }, 200)
+}
+
 // 监听全屏变化
 onMounted(() => {
   document.addEventListener('fullscreenchange', () => {
@@ -597,32 +913,30 @@ onMounted(() => {
   nextTick(() => {
     scrollToBottom()
   })
-  
-  // 监听键盘弹出事件（移动端）
-  window.addEventListener('resize', () => {
-    scrollToBottom()
-  })
-
-  // 添加ESC键监听
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && fullscreenVideo.value) {
-      closeFullscreenVideo()
-    }
-  })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-  document.removeEventListener('fullscreenchange', () => {})
-  window.removeEventListener('resize', scrollToBottom)
-  isVideoFullscreen.value = false
   
-  // 移除ESC键监听
-  document.removeEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && fullscreenVideo.value) {
-      closeFullscreenVideo()
-    }
-  })
+  // 释放录音相关资源
+  resetRecordingState()
+  
+  // 释放音频播放器资源
+  if (audioPlayer.value) {
+    audioPlayer.value.pause()
+    audioPlayer.value.src = ''
+  }
+  
+  // 清除所有定时器
+  clearInterval(recordTimer.value)
+  clearInterval(voiceAnimationTimer.value)
+  
+  // 关闭全屏
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(err => {
+      console.error('退出全屏失败:', err)
+    })
+  }
 })
 </script>
 
@@ -787,19 +1101,20 @@ onUnmounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(26, 26, 26, 0.95);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(212, 175, 55, 0.1);
-  padding: 12px 16px;
+  background: #f7f7f7;
+  padding: 8px 12px;
+  box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.1);
+  z-index: 50;
 }
 
 .input-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  padding: 4px 16px;
+  gap: 10px;
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .input-actions {
@@ -808,14 +1123,15 @@ onUnmounted(() => {
 }
 
 .action-icon {
-  color: #d4af37;
+  color: #555;
   cursor: pointer;
-  padding: 8px;
-  transition: transform 0.2s ease;
+  padding: 6px;
+  transition: color 0.2s ease;
+  font-size: 20px;
 }
 
 .action-icon:hover {
-  transform: scale(1.1);
+  color: #07c160;
 }
 
 .file-input {
@@ -826,14 +1142,16 @@ input {
   flex: 1;
   background: none;
   border: none;
-  padding: 8px 0;
-  color: #fff;
-  font-size: 16px;
+  padding: 8px 4px;
+  color: #333;
+  font-size: 15px;
   outline: none;
+  min-height: 20px;
+  max-height: 100px;
 }
 
 input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: #999;
 }
 
 .send-btn {
@@ -1237,5 +1555,234 @@ input::placeholder {
   .fullscreen-controls {
     opacity: 1;
   }
+}
+
+.video-load-shade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* 语音输入相关样式 */
+.voice-record-btn {
+  flex: 1;
+  height: 36px;
+  border-radius: 4px;
+  background: #f5f5f5;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  user-select: none;
+  touch-action: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin: 0 8px;
+}
+
+.voice-record-btn:active {
+  background: #e0e0e0;
+}
+
+.voice-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #d4af37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.voice-toggle-btn i {
+  color: #fff;
+  font-size: 20px;
+}
+
+.voice-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.voice-toggle-btn.active {
+  background: #e5c158;
+}
+
+.send-btn-container {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.send-btn {
+  color: #d4af37;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.voice-record-feedback {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.voice-record-panel {
+  width: 160px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.voice-record-panel.cancelling {
+  background: rgba(232, 17, 35, 0.7);
+}
+
+.record-icon {
+  font-size: 36px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.record-icon.recording {
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.record-wave-container {
+  display: flex;
+  align-items: flex-end;
+  height: 40px;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+.record-wave {
+  width: 3px;
+  background: #fff;
+  border-radius: 1px;
+  transition: height 0.2s ease;
+}
+
+.record-time {
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 12px;
+  font-family: monospace;
+}
+
+.record-tip {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.record-cancel-tip {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* 语音消息样式 */
+.voice-message {
+  display: flex;
+  align-items: center;
+  background: #3a3f5a;
+  padding: 12px 16px;
+  border-radius: 4px 18px 18px 18px;
+  min-width: 80px;
+  max-width: 240px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.sent .voice-message {
+  background: #0080ff;
+  border-radius: 18px 4px 18px 18px;
+}
+
+.voice-message:hover {
+  opacity: 0.9;
+}
+
+.voice-message-icon {
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.voice-message-icon i {
+  color: #fff;
+  font-size: 16px;
+}
+
+.voice-message-duration {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.voice-wave-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.voice-wave {
+  width: 2px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 1px;
+}
+
+.voice-message.playing .voice-wave {
+  animation: wave 1s infinite ease-in-out alternate;
+}
+
+.voice-message.playing .voice-wave:nth-child(1) { animation-delay: 0.0s; }
+.voice-message.playing .voice-wave:nth-child(2) { animation-delay: 0.2s; }
+.voice-message.playing .voice-wave:nth-child(3) { animation-delay: 0.4s; }
+.voice-message.playing .voice-wave:nth-child(4) { animation-delay: 0.6s; }
+
+@keyframes wave {
+  0% { height: 3px; }
+  100% { height: 12px; }
 }
 </style> 

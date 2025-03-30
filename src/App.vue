@@ -21,7 +21,8 @@ onMounted(() => {
     <template v-else>
       <PageTransition 
         :enable-swipe-back="true"
-        :disable-swipe-routes="['/profile', '/settings', '/publish', '/user', '/follow']">
+        :disable-swipe-routes="['/profile', '/settings', '/publish', '/user', '/follow']"
+        :respect-route-meta="true">
         <RouterView />
       </PageTransition>
     </template>
