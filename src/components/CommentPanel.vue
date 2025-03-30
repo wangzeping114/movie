@@ -1,101 +1,94 @@
 <template>
-  <div class="comment-wrapper" v-show="modelValue" @click.self="closePanel">
-    <div 
-      class="comment-panel" 
-      :class="{ 'panel-show': modelValue }"
-      @touchstart="handleTouchStart"
-      @touchmove="handleTouchMove"
-      @touchend="handleTouchEnd"
-    >
-      <!-- 头部 -->
-      <div class="panel-header">
-        <div class="drag-handle"></div>
-        <div class="header-content">
-          <span class="title">{{ commentCount }}条评论</span>
-          <span class="close-btn" @click="closePanel">关闭</span>
+  <teleport to="body">
+    <div class="comment-wrapper" v-show="modelValue" @click.self="closePanel">
+      <div 
+        class="comment-panel" 
+        :class="{ 'panel-show': modelValue }"
+        @touchstart="handleTouchStart"
+        @touchmove="handleTouchMove"
+        @touchend="handleTouchEnd"
+      >
+        <!-- 头部 -->
+        <div class="panel-header">
+          <div class="drag-handle"></div>
+          <div class="header-content">
+            <span class="title">{{ commentCount }}条评论</span>
+            <span class="close-btn" @click="closePanel">×</span>
+          </div>
         </div>
-      </div>
 
-      <!-- 评论列表 -->
-      <div class="comment-list" ref="commentListRef">
-        <div v-if="comments.length === 0" class="no-comment">
-          <div class="empty-icon material-icons">chat_bubble_outline</div>
-          <div class="empty-text">还没有评论，快来抢沙发吧~</div>
-        </div>
-        <template v-else>
-          <div v-for="comment in comments" :key="comment.id" class="comment-item">
-            <!-- 用户头像 -->
-            <div class="avatar">
-              <img :src="comment.avatar" :alt="comment.username">
-            </div>
-            <!-- 评论内容 -->
-            <div class="comment-content">
-              <div class="username">{{ comment.username }}</div>
-              <div class="text">{{ comment.content }}</div>
-              <div class="meta">
-                <span class="time">{{ comment.time }}</span>
-                <span class="reply-btn" @click="handleReply(comment)">回复</span>
+        <!-- 评论列表 -->
+        <div class="comment-list" ref="commentListRef">
+          <div v-if="comments.length === 0" class="no-comment">
+            <div class="empty-icon material-icons">chat_bubble_outline</div>
+            <div class="empty-text">还没有评论，快来抢沙发吧~</div>
+          </div>
+          <template v-else>
+            <div v-for="comment in comments" :key="comment.id" class="comment-item">
+              <!-- 用户头像 -->
+              <div class="avatar">
+                <img :src="comment.avatar" :alt="comment.username">
               </div>
-              <!-- 回复列表 -->
-              <div class="replies" v-if="comment.replies && comment.replies.length > 0">
-                <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                  <div class="reply-content">
-                    <span class="reply-username">{{ reply.username }}</span>
-                    <span class="reply-text">{{ reply.content }}</span>
-                  </div>
-                  <div class="reply-meta">
-                    <span class="time">{{ reply.time }}</span>
-                    <span class="reply-btn" @click="handleReply(reply)">回复</span>
+              <!-- 评论内容 -->
+              <div class="comment-content">
+                <div class="username">{{ comment.username }}</div>
+                <div class="text">{{ comment.content }}</div>
+                <div class="meta">
+                  <span class="time">{{ comment.time }}</span>
+                  <span class="reply-btn" @click.stop="handleReply(comment)">回复</span>
+                </div>
+                <!-- 回复列表 -->
+                <div class="replies" v-if="comment.replies && comment.replies.length > 0">
+                  <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+                    <div class="reply-content">
+                      <span class="reply-username">{{ reply.username }}</span>
+                      <span class="reply-text">{{ reply.content }}</span>
+                    </div>
+                    <div class="reply-meta">
+                      <span class="time">{{ reply.time }}</span>
+                      <span class="reply-btn" @click.stop="handleReply(reply)">回复</span>
+                    </div>
                   </div>
                 </div>
               </div>
+              <!-- 点赞 -->
+              <div class="like-wrapper">
+                <span 
+                  class="material-icons like-icon" 
+                  :class="{ 'liked': comment.isLiked }" 
+                  @click.stop="toggleLike(comment)"
+                >
+                  {{ comment.isLiked ? 'favorite' : 'favorite_border' }}
+                </span>
+                <span class="like-count" :class="{ 'liked': comment.isLiked }">
+                  {{ formatLikeCount(comment.likeCount) }}
+                </span>
+              </div>
             </div>
-            <!-- 点赞 -->
-            <div class="like-wrapper">
-              <span 
-                class="material-icons like-icon" 
-                :class="{ 
-                  'liked': comment.isLiked,
-                  'like-animation': comment.isAnimating 
-                }" 
-                @click="toggleLike(comment)"
-              >
-                {{ comment.isLiked ? 'favorite' : 'favorite_border' }}
-              </span>
-              <span class="like-count" :class="{ 'liked': comment.isLiked }">
-                {{ formatLikeCount(comment.likeCount) }}
-              </span>
-            </div>
-          </div>
-          
-          <!-- 加载状态 -->
-          <div v-if="loading" class="loading-state">
-            <div class="loading-spinner"></div>
-            <span>加载中...</span>
-          </div>
-          <div v-if="!hasMore && comments.length > 0" class="no-more">
-            没有更多评论了
-          </div>
-        </template>
-      </div>
+          </template>
+        </div>
 
-      <!-- 评论输入框 -->
-      <div class="comment-input">
-        <input 
-          type="text" 
-          v-model="commentText"
-          :placeholder="placeholder"
-          @keyup.enter="submitComment"
-          ref="commentInputRef"
-        >
-        <button 
-          class="submit-btn"
-          :class="{ 'active': commentText.trim() }"
-          @click="submitComment"
-        >发送</button>
+        <!-- 评论输入区域 -->
+        <div class="comment-input-wrapper">
+          <div class="comment-input">
+            <input 
+              type="text" 
+              v-model="commentText"
+              :placeholder="placeholder"
+              @keyup.enter="submitComment"
+              ref="commentInputRef"
+              @focus="handleInputFocus"
+            >
+            <button 
+              class="submit-btn"
+              :class="{ 'active': commentText.trim() }"
+              @click.stop="submitComment"
+            >发送</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+  </teleport>
 </template>
 
 <script setup>
@@ -233,7 +226,7 @@ const commentInputRef = ref(null)
 
 const handleReply = (comment) => {
   replyTo.value = comment
-  console.log('回复:', comment.username)
+  commentText.value = ''
   
   // 使用 nextTick 确保在 DOM 更新后再聚焦
   nextTick(() => {
@@ -245,8 +238,6 @@ const handleReply = (comment) => {
 
 const submitComment = () => {
   if (!commentText.value.trim()) return
-  
-  console.log('提交评论:', commentText.value)
   
   if (replyTo.value) {
     // 处理回复
@@ -354,6 +345,16 @@ const handleTouchEnd = (e) => {
   isDragging.value = false
   currentTranslateY.value = 0
 }
+
+// 修改输入框焦点处理
+const handleInputFocus = () => {
+  // 延迟执行以确保键盘完全弹出
+  setTimeout(() => {
+    if (commentInputRef.value) {
+      commentInputRef.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, 300)
+}
 </script>
 
 <style scoped>
@@ -364,7 +365,8 @@ const handleTouchEnd = (e) => {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: 99999;
+  isolation: isolate;
 }
 
 .comment-panel {
@@ -372,13 +374,16 @@ const handleTouchEnd = (e) => {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 70vh;
+  height: 60vh;
   background-color: #fff;
   transform: translateY(100%);
   transition: transform 0.3s ease-out;
   display: flex;
   flex-direction: column;
   border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  z-index: 100000;
+  isolation: isolate;
 }
 
 .panel-show {
@@ -386,15 +391,11 @@ const handleTouchEnd = (e) => {
 }
 
 .panel-header {
-  padding: 12px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   background-color: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  position: relative;
+  z-index: 2;
 }
 
 .drag-handle {
@@ -405,44 +406,55 @@ const handleTouchEnd = (e) => {
   margin: 0 auto 8px;
 }
 
+.header-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  height: 44px;
+}
+
 .title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 500;
   color: #333;
 }
 
 .close-btn {
   position: absolute;
-  right: 16px;
+  right: 0;
   top: 50%;
   transform: translateY(-50%);
-  cursor: pointer;
+  font-size: 24px;
   color: #666;
   padding: 8px;
+  cursor: pointer;
 }
 
 .comment-list {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
   background-color: #fff;
   -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1;
 }
 
 .comment-item {
   display: flex;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   position: relative;
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   margin-right: 12px;
   flex-shrink: 0;
   border-radius: 50%;
   overflow: hidden;
-  border: 1px solid #eee;
 }
 
 .avatar img {
@@ -457,21 +469,21 @@ const handleTouchEnd = (e) => {
 }
 
 .username {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
   margin-bottom: 4px;
-  color: #333;
 }
 
 .text {
   font-size: 15px;
-  line-height: 1.5;
-  margin-bottom: 8px;
+  line-height: 1.4;
   color: #333;
+  margin-bottom: 8px;
 }
 
 .meta {
-  font-size: 13px;
+  font-size: 12px;
   color: #999;
   display: flex;
   align-items: center;
@@ -484,15 +496,7 @@ const handleTouchEnd = (e) => {
 .reply-btn {
   color: #666;
   cursor: pointer;
-  font-size: 13px;
   padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.reply-btn:hover, .reply-btn:active {
-  background-color: #f0f0f0;
-  color: #333;
 }
 
 .replies {
@@ -504,14 +508,10 @@ const handleTouchEnd = (e) => {
 
 .reply-item {
   margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
 }
 
 .reply-item:last-child {
   margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
 }
 
 .reply-content {
@@ -521,8 +521,8 @@ const handleTouchEnd = (e) => {
 }
 
 .reply-username {
-  font-weight: 600;
-  color: #333;
+  font-weight: 500;
+  color: #666;
   font-size: 14px;
 }
 
@@ -554,80 +554,81 @@ const handleTouchEnd = (e) => {
   color: #666;
   transition: all 0.2s;
   user-select: none;
-  font-size: 24px;
-  padding: 4px;
+  font-size: 20px;
 }
 
 .like-icon.liked {
   color: #ff2c55;
 }
 
-.like-icon.like-animation {
-  animation: likeAnimation 0.3s ease;
-}
-
 .like-count {
-  font-size: 13px;
+  font-size: 12px;
   color: #999;
-  margin-top: 4px;
-  transition: color 0.2s;
+  margin-top: 2px;
 }
 
 .like-count.liked {
   color: #ff2c55;
 }
 
-.comment-input {
-  padding: 12px 16px;
+.comment-input-wrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  z-index: 100001;
   border-top: 1px solid #f0f0f0;
+  padding-bottom: env(safe-area-inset-bottom);
+  isolation: isolate;
+}
+
+.comment-input {
   display: flex;
   align-items: center;
+  padding: 8px 16px;
   background-color: #fff;
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
 .comment-input input {
   flex: 1;
-  height: 40px;
+  height: 36px;
   padding: 0 16px;
   border: 1px solid #e0e0e0;
-  border-radius: 20px;
+  border-radius: 18px;
   margin-right: 12px;
   font-size: 14px;
   background-color: #f5f5f5;
+  outline: none;
+  position: relative;
+  z-index: 1;
 }
 
 .comment-input input:focus {
-  outline: none;
   border-color: #ff2c55;
   background-color: #fff;
 }
 
 .submit-btn {
-  padding: 0 20px;
-  height: 40px;
+  padding: 0 16px;
+  height: 36px;
   border: none;
-  border-radius: 20px;
+  border-radius: 18px;
   background-color: #f0f0f0;
   color: #999;
   font-size: 14px;
   cursor: not-allowed;
   transition: all 0.2s;
-  font-weight: 500;
-  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+  min-width: 58px;
 }
 
 .submit-btn.active {
   background-color: #ff2c55;
   color: #fff;
   cursor: pointer;
-}
-
-.submit-btn.active:active {
-  opacity: 0.9;
 }
 
 .no-comment {
@@ -639,14 +640,28 @@ const handleTouchEnd = (e) => {
 }
 
 .empty-icon {
-  font-size: 48px;
+  font-size: 40px;
   color: #ccc;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .empty-text {
   color: #999;
   font-size: 14px;
+}
+
+/* 自定义滚动条样式 */
+.comment-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.comment-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.comment-list::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
 }
 
 .loading-state {
@@ -693,21 +708,24 @@ const handleTouchEnd = (e) => {
   }
 }
 
-/* 自定义滚动条样式 */
-.comment-list::-webkit-scrollbar {
-  width: 4px;
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .comment-panel {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
-.comment-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
+@media screen and (max-width: 768px) {
+  .comment-input-wrapper {
+    position: fixed;
+  }
+  
+  .comment-panel {
+    height: 70vh;
+  }
 }
 
-.comment-list::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 2px;
-}
-
-.comment-list::-webkit-scrollbar-thumb:hover {
-  background: #555;
+/* 添加新的样式规则 */
+:deep(*) {
+  box-sizing: border-box;
 }
 </style> 
