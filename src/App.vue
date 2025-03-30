@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { RouterView } from 'vue-router'
+import PageTransition from './components/PageTransition.vue'
 
 const router = useRouter()
 
@@ -13,7 +14,9 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
-    <RouterView />
+    <!-- <PageTransition :enable-swipe-back="false"> -->
+      <RouterView />
+    <!-- </PageTransition> -->
   </div>
 </template>
 

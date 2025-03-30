@@ -17,8 +17,7 @@ const routes = [
   {
     path: '/short-video',
     name: 'ShortVideo',
-    component: ShortVideo,
-    meta: { requiresAuth: true }
+    component: ShortVideo
   },
   {
     path: '/login',
