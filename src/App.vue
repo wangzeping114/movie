@@ -15,9 +15,16 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
-    <!-- <PageTransition :enable-swipe-back="false"> -->
+    <template v-if="$route.path === '/short-video'">
       <RouterView />
-    <!-- </PageTransition> -->
+    </template>
+    <template v-else>
+      <PageTransition 
+        :enable-swipe-back="true"
+        :disable-swipe-routes="['/profile', '/settings', '/publish', '/user', '/follow']">
+        <RouterView />
+      </PageTransition>
+    </template>
     
     <!-- 全局上传指示器 -->
     <UploadIndicator />

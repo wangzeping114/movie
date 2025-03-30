@@ -6,8 +6,10 @@ import Publish from '../views/Publish.vue'
 import Messages from '../views/Messages.vue'
 import Live from '../views/Live.vue'
 import LiveView from '../views/LiveView.vue'
-import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
+import Settings from '../views/Settings.vue'
+import About from '../views/About.vue'
+import FollowList from '../views/FollowList.vue'
 
 const routes = [
   {
@@ -18,6 +20,12 @@ const routes = [
     path: '/short-video',
     name: 'ShortVideo',
     component: ShortVideo
+  },
+  {
+    path: '/s/:id',
+    name: 'SharedVideo',
+    component: ShortVideo,
+    props: true
   },
   {
     path: '/login',
@@ -34,6 +42,12 @@ const routes = [
     path: '/user/:id',
     name: 'UserProfile',
     component: Profile,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/follow/:id?',
+    name: 'FollowList',
+    component: FollowList,
     meta: { requiresAuth: true }
   },
   {
@@ -58,14 +72,23 @@ const routes = [
     component: LiveView
   },
   {
-    path: '/home',
-    name: 'home',
-    component: HomeView
-  },
-  {
     path: '/chat/:id',
     name: 'chat',
     component: ChatView
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About,
+    meta: {
+      requiresAuth: true
+    }
   }
 ]
 

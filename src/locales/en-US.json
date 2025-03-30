@@ -7,5 +7,43 @@
   },
   "common": {
     "cancel": "Cancel"
+  },
+  "profile": {
+    "avatarUpdated": "Avatar updated successfully",
+    "usernameRequired": "Please enter username",
+    "profileUpdated": "Profile updated successfully",
+    "followed": "Followed successfully",
+    "unfollowed": "Unfollowed successfully"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme Settings",
+    "language": "Language Settings",
+    "notifications": "Notification Settings",
+    "privacy": "Privacy Settings",
+    "help": "Help & Support",
+    "about": "About Us",
+    "logout": "Logout",
+    "themeChanged": "Theme changed successfully",
+    "languageChanged": "Language changed successfully",
+    "notificationsUpdated": "Notification settings updated",
+    "privacyUpdated": "Privacy settings updated"
+  },
+  "themes": {
+    "gold": "Gold Theme",
+    "blue": "Blue Theme",
+    "purple": "Purple Theme",
+    "green": "Green Theme"
+  },
+  "notifications": {
+    "likes": "Like Notifications",
+    "comments": "Comment Notifications",
+    "follows": "Follow Notifications"
+  },
+  "privacy": {
+    "privateAccount": "Private Account",
+    "allowComments": "Allow Comments",
+    "allowDownload": "Allow Downloads",
+    "allowLikes": "Allow Likes"
   }
 } 

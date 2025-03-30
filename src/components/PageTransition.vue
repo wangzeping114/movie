@@ -4,6 +4,16 @@
     @touchstart="handleTouchStart"
     @touchmove="handleTouchMove"
     @touchend="handleTouchEnd">
+    <!-- 左滑动箭头（右方向箭头，表示向左滑动） -->
+    <div class="swipe-arrow right-arrow" :style="{ opacity: rightArrowOpacity }">
+      <i class="material-icons">arrow_forward</i>
+    </div>
+    
+    <!-- 右滑动箭头（左方向箭头，表示向右滑动） -->
+    <div class="swipe-arrow left-arrow" :style="{ opacity: leftArrowOpacity }">
+      <i class="material-icons">arrow_back</i>
+    </div>
+    
     <div 
       class="page-transition-inner"
       :style="{ transform: `translateX(${translateX}px)` }"
@@ -14,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -22,6 +32,16 @@ const props = defineProps({
   enableSwipeBack: {
     type: Boolean,
     default: true
+  },
+  // 禁用左右滑动的路径列表
+  disableSwipeRoutes: {
+    type: Array,
+    default: () => [
+      '/profile', 
+      '/settings', 
+      '/publish',
+      '/user'
+    ]
   }
 })
 
@@ -34,13 +54,40 @@ const touchEndX = ref(0)
 const touchEndY = ref(0)
 const minDistance = 50 // 最小滑动距离
 const isLocked = ref(false)
+const currentRoute = router.currentRoute
+
+// 计算箭头的透明度
+const leftArrowOpacity = computed(() => {
+  if (translateX.value <= 0) return 0
+  return Math.min(translateX.value / 100, 0.7)
+})
+
+const rightArrowOpacity = computed(() => {
+  if (translateX.value >= 0) return 0
+  return Math.min(Math.abs(translateX.value) / 100, 0.7)
+})
+
+// 检查当前路由是否需要禁用滑动
+const isSwipeDisabled = computed(() => {
+  return props.disableSwipeRoutes.some(route => 
+    currentRoute.value.path.startsWith(route)
+  )
+})
 
 const handleTouchStart = (e) => {
+  // 如果当前路由禁用滑动，则不处理
+  if (isSwipeDisabled.value) return
+  
   // 如果点击的是控制层或进度条，不处理触摸事件
   if (
     e.target.closest('.no-swipe') || 
     e.target.closest('.video-controls') || 
-    e.target.closest('.progress-bar')
+    e.target.closest('.progress-bar') ||
+    e.target.closest('input') ||
+    e.target.closest('textarea') ||
+    e.target.closest('select') ||
+    e.target.closest('.slider') ||
+    e.target.closest('.swiper')
   ) {
     return
   }
@@ -50,7 +97,7 @@ const handleTouchStart = (e) => {
 }
 
 const handleTouchMove = (e) => {
-  if (isLocked.value) return
+  if (isLocked.value || isSwipeDisabled.value) return
   
   touchEndX.value = e.touches[0].clientX
   touchEndY.value = e.touches[0].clientY
@@ -61,12 +108,30 @@ const handleTouchMove = (e) => {
   // 确保是水平滑动
   if (Math.abs(xDiff) > Math.abs(yDiff)) {
     e.preventDefault()
+    
+    // 如果是右滑且不允许返回，则不显示滑动效果
+    if (xDiff > 0 && !props.enableSwipeBack) {
+      translateX.value = 0
+      return
+    }
+    
+    // 如果是左滑且没有下一页，则不显示滑动效果
+    if (xDiff < 0) {
+      const currentRoute = router.currentRoute.value
+      const routes = router.getRoutes()
+      const currentIndex = routes.findIndex(route => route.path === currentRoute.path)
+      if (currentIndex >= routes.length - 1) {
+        translateX.value = 0
+        return
+      }
+    }
+    
     translateX.value = xDiff
   }
 }
 
 const handleTouchEnd = (e) => {
-  if (isLocked.value) return
+  if (isLocked.value || isSwipeDisabled.value) return
   
   const xDiff = touchEndX.value - touchStartX.value
   const yDiff = touchEndY.value - touchStartY.value
@@ -133,11 +198,13 @@ onBeforeUnmount(() => {
   overflow: visible;
   touch-action: pan-y;
   z-index: 1;
+  min-height: 100vh;
 }
 
 .page-transition-inner {
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   transition: transform 0.3s ease-out;
   will-change: transform;
   overflow: visible;
@@ -153,5 +220,38 @@ onBeforeUnmount(() => {
 :deep(video) {
   position: relative;
   z-index: 3;
+}
+
+/* 滑动箭头样式 */
+.swipe-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.swipe-arrow i {
+  color: #d4af37;
+  font-size: 28px;
+}
+
+.left-arrow {
+  left: 16px;
+}
+
+.right-arrow {
+  right: 16px;
 }
 </style> 

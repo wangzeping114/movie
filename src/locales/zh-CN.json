@@ -7,5 +7,75 @@
   },
   "common": {
     "cancel": "取消"
+  },
+  "profile": {
+    "avatarUpdated": "头像更新成功",
+    "usernameRequired": "请输入用户名",
+    "profileUpdated": "个人资料更新成功",
+    "followed": "关注成功",
+    "unfollowed": "已取消关注"
+  },
+  "settings": {
+    "title": "设置",
+    "theme": "主题设置",
+    "language": "语言设置",
+    "notifications": "通知设置",
+    "privacy": "隐私设置",
+    "help": "帮助与支持",
+    "about": "关于我们",
+    "logout": "退出登录",
+    "themeChanged": "主题切换成功",
+    "languageChanged": "语言切换成功",
+    "notificationsUpdated": "通知设置已更新",
+    "privacyUpdated": "隐私设置已更新"
+  },
+  "themes": {
+    "gold": "金色主题",
+    "blue": "蓝色主题",
+    "purple": "紫色主题",
+    "green": "绿色主题"
+  },
+  "notifications": {
+    "likes": "点赞通知",
+    "comments": "评论通知",
+    "follows": "关注通知"
+  },
+  "privacy": {
+    "privateAccount": "私密账号",
+    "allowComments": "允许评论",
+    "allowDownload": "允许下载",
+    "allowLikes": "允许点赞"
+  },
+  "about": {
+    "title": "关于我们",
+    "appName": "短视频应用",
+    "version": "版本 1.0.0",
+    "company": "公司简介",
+    "companyDesc": "我们是一家专注于短视频内容创作和分享的科技公司，致力于为用户提供优质的视频创作和观看体验。",
+    "userCount": "100万+",
+    "users": "活跃用户",
+    "videoCount": "500万+",
+    "videos": "视频作品",
+    "countryCount": "50+",
+    "countries": "覆盖国家",
+    "team": "核心团队",
+    "teamMember1": {
+      "name": "张三",
+      "role": "创始人 & CEO"
+    },
+    "teamMember2": {
+      "name": "李四",
+      "role": "产品总监"
+    },
+    "teamMember3": {
+      "name": "王五",
+      "role": "技术总监"
+    },
+    "social": "关注我们",
+    "weibo": "官方微博",
+    "wechat": "微信公众号",
+    "website": "官方网站",
+    "copyright": "© 2024 短视频应用",
+    "rights": "保留所有权利"
   }
 } 

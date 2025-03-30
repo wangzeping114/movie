@@ -1,13 +1,16 @@
 <template>
   <div class="profile-container">
+    <!-- 添加 Toast 组件 -->
+    <Toast v-if="toastMessage" :message="toastMessage" :type="toastType" />
+
     <!-- 导航栏 -->
     <div class="nav-bar">
-      <div class="back-btn" @click="router.back()">
+      <div class="back-btn" @click="router.push('/short-video')">
         <span class="material-icons">arrow_back</span>
       </div>
       <h1>{{ isCurrentUser ? t('profile.title') : profileUser.username }}</h1>
       <div class="nav-actions">
-        <span class="material-icons" v-if="isCurrentUser" @click="showSettings = true">settings</span>
+        <span class="material-icons" v-if="isCurrentUser" @click="router.push('/settings')">settings</span>
         <span class="material-icons" v-else @click="toggleFollow">{{ profileUser.isFollowed ? 'done' : 'add' }}</span>
       </div>
     </div>
@@ -27,11 +30,11 @@
           <span class="stat-count">{{ formatNumber(profileUser.stats.likes) }}</span>
           <span class="stat-label">{{ t('profile.likes') }}</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item clickable" @click="goToFollowers(profileUser.id)">
           <span class="stat-count">{{ formatNumber(profileUser.stats.followers) }}</span>
           <span class="stat-label">{{ t('profile.followers') }}</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item clickable" @click="goToFollowing(profileUser.id)">
           <span class="stat-count">{{ formatNumber(profileUser.stats.following) }}</span>
           <span class="stat-label">{{ t('profile.following') }}</span>
         </div>
@@ -92,6 +95,10 @@
                   <span class="material-icons">favorite</span>
                   {{ formatNumber(video.likes || 0) }}
                 </span>
+                <span class="video-stat">
+                  <span class="material-icons">chat_bubble</span>
+                  {{ formatNumber(video.comments || 0) }}
+                </span>
               </div>
               <div class="video-description" v-if="video.description">{{ video.description }}</div>
               <div class="video-date">{{ formatDate(video.createdAt || new Date()) }}</div>
@@ -101,9 +108,10 @@
       </div>
       <div class="empty-state" v-else-if="currentTab === 'works' && works.length === 0">
         <span class="material-icons">videocam_off</span>
-        <p>{{ isCurrentUser ? '你还没有发布作品' : '该用户还没有发布作品' }}</p>
+        <p>{{ isCurrentUser ? t('profile.noWorks') : t('profile.userNoWorks') }}</p>
         <button v-if="isCurrentUser" class="action-btn" @click="router.push('/publish')">
-          立即发布
+          <span class="material-icons">add</span>
+          {{ t('profile.createWork') }}
         </button>
       </div>
 
@@ -129,18 +137,27 @@
                   <span class="material-icons">favorite</span>
                   {{ formatNumber(video.likes || 0) }}
                 </span>
+                <span class="video-stat">
+                  <span class="material-icons">chat_bubble</span>
+                  {{ formatNumber(video.comments || 0) }}
+                </span>
               </div>
-              <div class="video-author" v-if="video.authorName">{{ video.authorName }}</div>
               <div class="video-description" v-if="video.description">{{ video.description }}</div>
+              <div class="video-author">
+                <img :src="video.authorAvatar" :alt="video.authorName">
+                <span>{{ video.authorName }}</span>
+              </div>
+              <div class="video-date">{{ formatDate(video.createdAt || new Date()) }}</div>
             </div>
           </div>
         </div>
       </div>
       <div class="empty-state" v-else-if="currentTab === 'likes' && likedVideos.length === 0">
         <span class="material-icons">favorite_border</span>
-        <p>{{ isCurrentUser ? '你还没有喜欢的视频' : '该用户还没有喜欢的视频' }}</p>
+        <p>{{ isCurrentUser ? t('profile.noLikes') : t('profile.userNoLikes') }}</p>
         <button v-if="isCurrentUser" class="action-btn" @click="router.push('/short-video')">
-          去探索更多视频
+          <span class="material-icons">explore</span>
+          {{ t('profile.exploreLikes') }}
         </button>
       </div>
     </div>
@@ -152,45 +169,7 @@
           <h3>{{ t('settings.title') }}</h3>
           <span class="material-icons close-icon" @click="showSettings = false">close</span>
         </div>
-        <div class="settings-list">
-          <div class="settings-item" @click="handleLanguageSettings">
-            <span class="material-icons">language</span>
-            <span>{{ t('settings.language') }}</span>
-            <span class="material-icons right-icon">chevron_right</span>
-          </div>
-          <div class="settings-item">
-            <span class="material-icons">dark_mode</span>
-            <span>{{ t('settings.darkMode') }}</span>
-            <div class="switch">
-              <input type="checkbox" id="dark-mode-switch">
-              <label for="dark-mode-switch"></label>
-            </div>
-          </div>
-          <div class="settings-item">
-            <span class="material-icons">notifications</span>
-            <span>{{ t('settings.notifications') }}</span>
-            <span class="material-icons right-icon">chevron_right</span>
-          </div>
-          <div class="settings-item">
-            <span class="material-icons">lock</span>
-            <span>{{ t('settings.privacy') }}</span>
-            <span class="material-icons right-icon">chevron_right</span>
-          </div>
-          <div class="settings-item">
-            <span class="material-icons">help_outline</span>
-            <span>{{ t('settings.help') }}</span>
-            <span class="material-icons right-icon">chevron_right</span>
-          </div>
-          <div class="settings-item">
-            <span class="material-icons">info_outline</span>
-            <span>{{ t('settings.about') }}</span>
-            <span class="material-icons right-icon">chevron_right</span>
-          </div>
-          <div class="settings-item logout" @click="handleLogout">
-            <span class="material-icons">logout</span>
-            <span>{{ t('settings.logout') }}</span>
-          </div>
-        </div>
+        <SettingsPanel />
       </div>
     </div>
 
@@ -275,6 +254,8 @@
 import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import Toast from '../components/Toast.vue'
+import SettingsPanel from '../components/SettingsPanel.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -314,6 +295,16 @@ const profileForm = reactive({
   bio: ''
 })
 
+// 添加 Toast 相关的状态
+const toastMessage = ref('')
+const toastType = ref('info')
+
+// 显示 Toast 的函数
+const showToast = (message, type = 'info') => {
+  toastMessage.value = message
+  toastType.value = type
+}
+
 // 关注/取消关注用户
 const toggleFollow = () => {
   if (!user.isLoggedIn) {
@@ -328,9 +319,11 @@ const toggleFollow = () => {
   if (profileUser.value.isFollowed) {
     profileUser.value.isFollowed = false
     profileUser.value.stats.followers -= 1
+    showToast(t('profile.unfollowed'), 'info')
   } else {
     profileUser.value.isFollowed = true
     profileUser.value.stats.followers += 1
+    showToast(t('profile.followed'), 'success')
   }
 }
 
@@ -509,13 +502,13 @@ const handleAvatarSubmit = () => {
   
   // 关闭弹窗
   showAvatarUpload.value = false
-  alert(t('profile.avatarUpdated'))
+  showToast(t('profile.avatarUpdated'), 'success')
 }
 
 // 处理资料编辑提交
 const handleProfileSubmit = () => {
   if (!profileForm.username.trim()) {
-    alert(t('profile.usernameRequired'))
+    showToast(t('profile.usernameRequired'), 'warning')
     return
   }
   
@@ -528,7 +521,7 @@ const handleProfileSubmit = () => {
   localStorage.setItem('user', JSON.stringify(newUser))
   
   showEditProfile.value = false
-  alert(t('profile.profileUpdated'))
+  showToast(t('profile.profileUpdated'), 'success')
 }
 
 // 处理用户登出
@@ -547,6 +540,7 @@ const handleLanguageSettings = () => {
 const changeLanguage = (lang) => {
   locale.value = lang
   localStorage.setItem('locale', lang)
+  showToast(t('settings.languageChanged'), 'success')
   // 短暂延迟后关闭弹窗
   setTimeout(() => {
     showLanguageSettings.value = false
@@ -600,6 +594,52 @@ const handleVideoHover = (event, isHover) => {
   } else {
     video.pause()
     video.currentTime = 0
+  }
+}
+
+// 处理粉丝跳转
+const goToFollowers = (userId) => {
+  if (!user.isLoggedIn) {
+    router.push({
+      path: '/login',
+      query: { from: route.fullPath }
+    })
+    return
+  }
+  
+  if (isCurrentUser.value) {
+    router.push({
+      path: '/follow',
+      query: { tab: 'followers' }
+    })
+  } else {
+    router.push({
+      path: `/follow/${userId}`,
+      query: { tab: 'followers' }
+    })
+  }
+}
+
+// 处理关注跳转
+const goToFollowing = (userId) => {
+  if (!user.isLoggedIn) {
+    router.push({
+      path: '/login',
+      query: { from: route.fullPath }
+    })
+    return
+  }
+  
+  if (isCurrentUser.value) {
+    router.push({
+      path: '/follow',
+      query: { tab: 'following' }
+    })
+  } else {
+    router.push({
+      path: `/follow/${userId}`,
+      query: { tab: 'following' }
+    })
   }
 }
 </script>
@@ -741,7 +781,35 @@ const handleVideoHover = (event, isHover) => {
 }
 
 .stat-item {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.stat-item.clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.stat-item.clickable:active {
+  opacity: 0.7;
+}
+
+.stat-item.clickable::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background-color: #d4af37;
+  transition: width 0.3s ease;
+}
+
+.stat-item.clickable:hover::after {
+  width: 70%;
 }
 
 .stat-count {
@@ -825,27 +893,29 @@ const handleVideoHover = (event, isHover) => {
 .video-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
+  gap: 12px;
   padding: 16px;
+  width: 100%;
 }
 
 .video-item {
-  cursor: pointer;
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  transition: transform 0.2s ease;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .video-item:hover {
   transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .video-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -853,9 +923,9 @@ const handleVideoHover = (event, isHover) => {
 
 .video-preview {
   width: 100%;
-  aspect-ratio: 9/16;
   object-fit: cover;
   background-color: #000;
+  border-radius: 12px 12px 0 0;
 }
 
 .video-info {
@@ -863,43 +933,111 @@ const handleVideoHover = (event, isHover) => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 13px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.95));
+  border-radius: 0 0 12px 12px;
 }
 
 .video-stats {
   display: flex;
   gap: 12px;
+  margin-bottom: 4px;
 }
 
 .video-stat {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 12px;
+  font-weight: 500;
 }
 
 .video-stat .material-icons {
   font-size: 14px;
+  color: #d4af37;
 }
 
 .video-description {
-  white-space: nowrap;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
 }
 
 .video-author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.video-author img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.video-author span {
   font-size: 12px;
-  font-weight: 600;
   color: #d4af37;
+  font-weight: 500;
 }
 
 .video-date {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.empty-state .material-icons {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: rgba(212, 175, 55, 0.3);
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.action-btn {
+  background: linear-gradient(45deg, #d4af37, #e5c158);
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+}
+
+.action-btn .material-icons {
+  font-size: 18px;
 }
 
 /* 头像上传样式 */

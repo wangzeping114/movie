@@ -86,10 +86,10 @@
       <div class="action-bar" :class="{ 'landscape-action-bar': isLandscape }">
         <!-- 作者头像 -->
         <div class="author-avatar-wrapper">
-          <div class="author-avatar" @click="goToUserProfile(videos[currentIndex].authorId)">
+          <div class="author-avatar" @click="goToUserProfile(videos[currentIndex].authorId, $event)">
             <img :src="videos[currentIndex].authorAvatar" :alt="videos[currentIndex].authorName">
           </div>
-          <div class="follow-plus-container" v-if="!videos[currentIndex].isFollowed" @click.stop="toggleFollow(currentIndex)">
+          <div class="follow-plus-container" v-if="!videos[currentIndex].isFollowed" @click.stop="toggleFollow(currentIndex, $event)">
             <div class="follow-plus">
               <i class="material-icons" v-if="videos[currentIndex].followAnimation === 'check'">check</i>
               <i class="material-icons" v-else>add</i>
@@ -114,7 +114,7 @@
         </div>
 
         <!-- 分享按钮 -->
-        <div class="action-item" @click="handleShare(currentIndex)">
+        <div class="action-item" @click="handleShare(currentIndex, $event)">
           <div class="action-icon">
             <i class="material-icons">share</i>
           </div>
@@ -251,20 +251,29 @@
         <span class="nav-label">我的</span>
       </div>
     </div>
+
+    <!-- 添加分享面板 -->
+    <SharePanel
+      v-model="showSharePanel"
+      :video-id="videos[currentIndex].id"
+      @share="onShare"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CommentPanel from '../components/CommentPanel.vue'
 import SearchPanel from '../components/SearchPanel.vue'
+import SharePanel from '../components/SharePanel.vue'
 import Icon from '../components/Icon.vue'
 
 console.log('ShortVideo component loaded')
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 const defaultAvatar = 'https://randomuser.me/api/portraits/lego/1.jpg'
@@ -321,6 +330,7 @@ let touchEndY = 0
 let hasInteracted = false
 const showCommentPanel = ref(false)
 const showSearchPanel = ref(false)
+const showSharePanel = ref(false)  // 添加分享面板状态
 const hasUserInteracted = ref(false)
 const isLandscape = ref(false)  // 是否横向模式
 
@@ -362,6 +372,18 @@ const checkVideoAspectRatio = (index) => {
 }
 
 const handleTouchStart = (e) => {
+  // 如果评论面板打开，或者点击的是评论、点赞、分享、作者头像相关元素，不处理触摸事件
+  if (showCommentPanel.value || e.target.closest('.comment-panel') || e.target.closest('.comment-wrapper') ||
+      e.target.closest('.author-avatar') || e.target.closest('.follow-plus-container') ||
+      e.target.closest('.action-item') && (
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'chat_bubble_outline' ||
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'favorite' ||
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'favorite_border' ||
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'share'
+      )) {
+    return;
+  }
+  
   // 如果点击的是控制层或进度条，不处理触摸事件
   if (e.target.closest('.video-controls') || e.target.closest('.progress-bar')) {
     return;
@@ -374,6 +396,18 @@ const handleTouchStart = (e) => {
 }
 
 const handleTouchMove = (e) => {
+  // 如果评论面板打开，或者点击的是评论、点赞、分享、作者头像相关元素，不处理触摸事件
+  if (showCommentPanel.value || e.target.closest('.comment-panel') || e.target.closest('.comment-wrapper') ||
+      e.target.closest('.author-avatar') || e.target.closest('.follow-plus-container') ||
+      e.target.closest('.action-item') && (
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'chat_bubble_outline' ||
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'favorite' ||
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'favorite_border' ||
+        e.target.closest('.action-item').querySelector('.material-icons').textContent === 'share'
+      )) {
+    return;
+  }
+
   // 如果点击的是控制层或进度条，不处理触摸事件
   if (e.target.closest('.video-controls') || e.target.closest('.progress-bar')) {
     return;
@@ -383,7 +417,19 @@ const handleTouchMove = (e) => {
 
 let isSwitching = false;
 
-const handleTouchEnd = () => {
+const handleTouchEnd = (event) => {
+  // 如果评论面板打开，或者点击的是评论、点赞、分享、作者头像相关元素，不处理触摸事件
+  if (showCommentPanel.value || event.target.closest('.comment-panel') || event.target.closest('.comment-wrapper') ||
+      event.target.closest('.author-avatar') || event.target.closest('.follow-plus-container') ||
+      event.target.closest('.action-item') && (
+        event.target.closest('.action-item').querySelector('.material-icons').textContent === 'chat_bubble_outline' ||
+        event.target.closest('.action-item').querySelector('.material-icons').textContent === 'favorite' ||
+        event.target.closest('.action-item').querySelector('.material-icons').textContent === 'favorite_border' ||
+        event.target.closest('.action-item').querySelector('.material-icons').textContent === 'share'
+      )) {
+    return;
+  }
+
   // 如果点击的是控制层或进度条，不处理触摸事件
   if (event.target.closest('.video-controls') || event.target.closest('.progress-bar')) {
     return;
@@ -486,6 +532,9 @@ const handleVideoEnd = () => {
 };
 
 const handleLike = (index) => {
+  // 阻止事件冒泡，防止触发视频切换
+  event.stopPropagation();
+  
   if (!user.isLoggedIn) {
     router.push({
       path: '/login',
@@ -509,6 +558,9 @@ const handleLike = (index) => {
 }
 
 const handleComment = (index) => {
+  // 阻止事件冒泡，防止触发视频切换
+  event.stopPropagation();
+  
   if (!user.isLoggedIn) {
     router.push({
       path: '/login',
@@ -519,7 +571,12 @@ const handleComment = (index) => {
   showCommentPanel.value = true
 }
 
-const handleShare = (index) => {
+const handleShare = (index, event) => {
+  // 阻止事件冒泡，防止触发视频切换
+  if (event) {
+    event.stopPropagation();
+  }
+  
   if (!user.isLoggedIn) {
     router.push({
       path: '/login',
@@ -527,7 +584,9 @@ const handleShare = (index) => {
     })
     return
   }
-  // 实现分享功能
+  
+  // 显示分享面板
+  showSharePanel.value = true
 }
 
 const handleUserInteraction = () => {
@@ -611,6 +670,20 @@ const formatTime = (seconds) => {
 onMounted(() => {
   console.log('ShortVideo component mounted')
   
+  // 检查路由参数，如果有共享视频ID，则切换到该视频
+  const sharedVideoId = route.params.id
+  if (sharedVideoId) {
+    // 查找匹配的视频
+    const index = videos.value.findIndex(v => v.id === sharedVideoId)
+    if (index !== -1) {
+      currentIndex.value = index
+    } else {
+      // 如果没有找到匹配的视频，可以展示提示或者加载该视频
+      console.log(`未找到ID为${sharedVideoId}的视频，将尝试加载`)
+      // 这里可以添加加载视频的逻辑
+    }
+  }
+  
   // 确保视频引用已经准备好
   nextTick(() => {
     // 添加用户交互监听
@@ -670,7 +743,12 @@ const handlePublish = () => {
 }
 
 // 添加关注/取消关注函数
-const toggleFollow = (index) => {
+const toggleFollow = (index, event) => {
+  // 阻止事件冒泡，防止触发视频切换
+  if (event) {
+    event.stopPropagation();
+  }
+  
   if (!user.isLoggedIn) {
     router.push({
       path: '/login',
@@ -689,7 +767,12 @@ const toggleFollow = (index) => {
 }
 
 // 跳转到用户资料页
-const goToUserProfile = (userId) => {
+const goToUserProfile = (userId, event) => {
+  // 阻止事件冒泡，防止触发视频切换
+  if (event) {
+    event.stopPropagation();
+  }
+  
   if (user.isLoggedIn) {
     router.push(`/user/${userId}`)
   } else {
@@ -761,6 +844,18 @@ const toggleMute = () => {
   if (videoRefs.value && videoRefs.value[currentIndex.value]) {
     videoRefs.value[currentIndex.value].muted = videos.value[currentIndex.value].isMuted
   }
+}
+
+// 处理分享事件
+const onShare = ({ type, link }) => {
+  console.log(`分享到 ${type}，链接：${link}`)
+  
+  // 更新分享数
+  if (type !== 'link') { // 仅复制链接不算分享
+    videos.value[currentIndex.value].shares += 1
+  }
+  
+  // 可以在这里添加分享成功的提示或者其他后续操作
 }
 </script>
 
