@@ -34,9 +34,10 @@
         :key="message.id" 
         class="message-wrapper"
         :class="{ 'sliding': message.isSliding, 'editing': isEditing }"
-        @touchstart="!isEditing && handleTouchStart($event, message)"
-        @touchmove="!isEditing && handleTouchMove($event)"
-        @touchend="!isEditing && handleTouchEnd($event)"
+        :data-id="message.id"
+        @touchstart.stop="!isEditing && handleTouchStart($event, message)"
+        @touchmove.stop="!isEditing && handleTouchMove($event)"
+        @touchend.stop="!isEditing && handleTouchEnd($event)"
       >
         <div class="checkbox-wrapper" v-if="isEditing">
           <input 
@@ -173,6 +174,10 @@ const startX = ref(0)
 const currentX = ref(0)
 const isDragging = ref(false)
 
+// 添加长按相关变量
+const longPressTimer = ref(null)
+const longPressDelay = 500 // 长按触发时间（毫秒）
+
 // 开始编辑模式
 const startEdit = () => {
   isEditing.value = true
@@ -245,78 +250,99 @@ const confirmBatchDelete = () => {
   cancelEdit()
 }
 
-// 处理消息点击
-const handleItemClick = (message) => {
-  if (isEditing.value) {
-    toggleSelect(message)
-  } else {
-    handleMessageClick(message)
-  }
-}
-
-// 处理触摸开始
+// 修改触摸开始处理函数
 const handleTouchStart = (event, message) => {
-  // 关闭其他所有打开的消息
-  messages.value.forEach(m => {
-    if (m !== message && m.isSliding) {
-      m.isSliding = false
-    }
-  })
+  // 如果已经在滑动其他消息，先重置
+  if (slidingMessage.value && slidingMessage.value !== message) {
+    resetSlide(slidingMessage.value)
+  }
   
-  // 获取当前消息的滑动元素
-  const slideElement = event.currentTarget.querySelector('.message-slide-content')
+  // 设置长按定时器
+  longPressTimer.value = setTimeout(() => {
+    startX.value = event.touches[0].clientX
+    currentX.value = event.touches[0].clientX
+    isDragging.value = true
+    slidingMessage.value = message
+    message.isSliding = true
+  }, longPressDelay)
   
-  // 重置所有其他消息的滑动状态
-  document.querySelectorAll('.message-wrapper.sliding').forEach(el => {
-    if (el !== event.currentTarget) {
-      el.classList.remove('sliding')
-      const content = el.querySelector('.message-slide-content')
-      if (content) {
-        content.style.transform = 'translateX(0)'
-      }
-    }
-  })
-  
-  isDragging.value = true
-  startX.value = event.touches[0].clientX
-  currentX.value = startX.value
-  slidingMessage.value = message
-  currentSlideElement.value = slideElement
+  // 阻止事件冒泡，防止触发点击事件
+  event.stopPropagation()
 }
 
-// 处理触摸移动
+// 修改触摸移动处理函数
 const handleTouchMove = (event) => {
-  if (!isDragging.value || !currentSlideElement.value) return
-  event.preventDefault() // 阻止默认滚动
+  // 如果长按定时器还在，清除它
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+    return
+  }
+  
+  if (!isDragging.value || !slidingMessage.value) return
+  
   currentX.value = event.touches[0].clientX
   const diff = currentX.value - startX.value
   
-  // 限制只能向左滑动，且最大滑动距离为240px
-  if (diff <= 0 && diff >= -240) {
-    currentSlideElement.value.style.transform = `translateX(${diff}px)`
+  // 只允许向左滑动
+  if (diff < 0) {
+    const slideElement = document.querySelector(`.message-wrapper[data-id="${slidingMessage.value.id}"]`)
+    if (slideElement) {
+      const content = slideElement.querySelector('.message-slide-content')
+      if (content) {
+        content.style.transform = `translateX(${Math.max(diff, -240)}px)`
+      }
+    }
   }
+  
+  // 阻止事件冒泡，防止触发点击事件
+  event.stopPropagation()
 }
 
-// 处理触摸结束
+// 修改触摸结束处理函数
 const handleTouchEnd = (event) => {
-  if (!isDragging.value || !currentSlideElement.value) return
-  isDragging.value = false
-  const diff = currentX.value - startX.value
-  const messageWrapper = currentSlideElement.value.parentElement
+  // 清除长按定时器
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+    return
+  }
   
-  if (diff < -80) { // 降低滑动阈值以便更容易触发
-    currentSlideElement.value.style.transform = 'translateX(-240px)'
-    messageWrapper.classList.add('sliding')
-    if (slidingMessage.value) {
-      slidingMessage.value.isSliding = true
+  if (!isDragging.value || !slidingMessage.value) return
+  
+  const diff = currentX.value - startX.value
+  
+  // 如果滑动距离超过阈值，保持展开状态
+  if (diff < -120) {
+    const slideElement = document.querySelector(`.message-wrapper[data-id="${slidingMessage.value.id}"]`)
+    if (slideElement) {
+      const content = slideElement.querySelector('.message-slide-content')
+      if (content) {
+        content.style.transform = 'translateX(-240px)'
+      }
     }
   } else {
-    currentSlideElement.value.style.transform = 'translateX(0)'
-    messageWrapper.classList.remove('sliding')
-    if (slidingMessage.value) {
-      slidingMessage.value.isSliding = false
+    // 否则重置位置
+    resetSlide(slidingMessage.value)
+  }
+  
+  isDragging.value = false
+  
+  // 阻止事件冒泡，防止触发点击事件
+  event.stopPropagation()
+}
+
+// 添加重置滑动状态的函数
+const resetSlide = (message) => {
+  const slideElement = document.querySelector(`.message-wrapper[data-id="${message.id}"]`)
+  if (slideElement) {
+    const content = slideElement.querySelector('.message-slide-content')
+    if (content) {
+      content.style.transform = 'translateX(0)'
     }
   }
+  message.isSliding = false
+  slidingMessage.value = null
 }
 
 // 处理标为已读
@@ -420,6 +446,16 @@ const refreshMessages = async () => {
 watch(messages, (newVal) => {
   console.log('消息列表状态变化:', JSON.stringify(newVal.map(m => ({id: m.id, name: m.name}))))
 }, { deep: true })
+
+// 添加消息点击处理函数
+const handleItemClick = (message) => {
+  if (isEditing.value) {
+    toggleSelect(message)
+  } else {
+    // 直接进入聊天页面
+    handleMessageClick(message)
+  }
+}
 </script>
 
 <style scoped>
@@ -480,9 +516,9 @@ watch(messages, (newVal) => {
 .message-wrapper {
   position: relative;
   width: 100%;
+  background-color: #1a1a1a;
   overflow: hidden;
-  touch-action: none;
-  transition: all 0.3s ease;
+  touch-action: pan-y pinch-zoom;
 }
 
 .message-wrapper.sliding {
@@ -492,9 +528,9 @@ watch(messages, (newVal) => {
 .message-slide-content {
   position: relative;
   width: 100%;
-  transition: transform 0.3s ease;
-  z-index: 1;
-  background: #1a1a1a;
+  background-color: #1a1a1a;
+  transition: transform 0.3s ease-out;
+  will-change: transform;
 }
 
 .message-item {
@@ -506,6 +542,7 @@ watch(messages, (newVal) => {
   transition: all 0.3s ease;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   user-select: none;
+  background-color: #1a1a1a;
 }
 
 .message-item:hover {
@@ -532,21 +569,11 @@ watch(messages, (newVal) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 80px;
+  width: 120px;
   height: 100%;
   color: #fff;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.action-btn i {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.action-btn span {
-  font-size: 12px;
-  white-space: nowrap;
 }
 
 .mark-read {
@@ -555,15 +582,6 @@ watch(messages, (newVal) => {
 
 .delete {
   background: #F44336;
-}
-
-.action-btn:hover {
-  opacity: 0.9;
-}
-
-/* 添加滑动效果 */
-.message-wrapper.sliding .message-slide-content {
-  transform: translateX(-240px);
 }
 
 .message-avatar {
