@@ -25,6 +25,7 @@
     <!-- 消息列表 -->
     <div 
       class="message-list"
+      :class="{ 'editing-mode': isEditing }"
       @touchstart="handlePullStart"
       @touchmove="handlePullMove"
       @touchend="handlePullEnd"
@@ -178,10 +179,26 @@ const isDragging = ref(false)
 const longPressTimer = ref(null)
 const longPressDelay = 500 // 长按触发时间（毫秒）
 
-// 开始编辑模式
+// 修改消息点击处理函数
+const handleItemClick = (message) => {
+  if (isEditing.value) {
+    toggleSelect(message)
+  } else {
+    // 直接进入聊天页面
+    handleMessageClick(message)
+  }
+}
+
+// 修改开始编辑模式函数
 const startEdit = () => {
   isEditing.value = true
   selectedMessages.value = []
+  // 重置所有滑动状态
+  messages.value.forEach(message => {
+    if (message.isSliding) {
+      resetSlide(message)
+    }
+  })
 }
 
 // 取消编辑模式
@@ -384,7 +401,7 @@ const handleMessageClick = (message) => {
 
 // 处理下拉刷新开始
 const handlePullStart = (event) => {
-  if (isRefreshing.value) return
+  if (isRefreshing.value || isEditing.value) return
   const scrollTop = document.querySelector('.message-list').scrollTop
   if (scrollTop > 0) return // 只有在顶部才能下拉刷新
   
@@ -393,7 +410,7 @@ const handlePullStart = (event) => {
 
 // 处理下拉刷新移动
 const handlePullMove = (event) => {
-  if (isRefreshing.value) return
+  if (isRefreshing.value || isEditing.value) return
   const scrollTop = document.querySelector('.message-list').scrollTop
   if (scrollTop > 0) return
   
@@ -409,6 +426,8 @@ const handlePullMove = (event) => {
 
 // 处理下拉刷新结束
 const handlePullEnd = async () => {
+  if (isEditing.value) return
+  
   if (refreshDistance.value >= refreshThreshold) {
     isRefreshing.value = true
     await refreshMessages()
@@ -419,42 +438,6 @@ const handlePullEnd = async () => {
   setTimeout(() => {
     isRefreshing.value = false
   }, 300)
-}
-
-// 修改刷新消息列表函数
-const refreshMessages = async () => {
-  isRefreshing.value = true
-  
-  try {
-    // 模拟异步加载新消息
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 生成5条新消息
-    const newMessages = generateTestMessages(messages.value.length + 1, 5)
-    
-    // 将新消息添加到列表顶部
-    messages.value = [...newMessages, ...messages.value]
-    
-  } catch (error) {
-    console.error('刷新消息失败:', error)
-  } finally {
-    isRefreshing.value = false
-  }
-}
-
-// 监听消息列表变化
-watch(messages, (newVal) => {
-  console.log('消息列表状态变化:', JSON.stringify(newVal.map(m => ({id: m.id, name: m.name}))))
-}, { deep: true })
-
-// 添加消息点击处理函数
-const handleItemClick = (message) => {
-  if (isEditing.value) {
-    toggleSelect(message)
-  } else {
-    // 直接进入聊天页面
-    handleMessageClick(message)
-  }
 }
 </script>
 
@@ -705,16 +688,16 @@ const handleItemClick = (message) => {
   cursor: pointer;
 }
 
-.message-wrapper.editing .message-slide-content {
-  padding-left: 48px;
-}
-
 .message-wrapper.editing {
   pointer-events: auto !important;
 }
 
 .message-wrapper.editing .message-actions {
   display: none;
+}
+
+.message-wrapper.editing .message-slide-content {
+  transform: none !important;
 }
 
 .refresh-indicator {
@@ -750,5 +733,26 @@ const handleItemClick = (message) => {
   to {
     transform: rotate(360deg);
   }
+}
+
+.message-list.editing-mode {
+  touch-action: none;
+  overflow: hidden;
+}
+
+.message-list.editing-mode .message-wrapper {
+  pointer-events: auto;
+}
+
+.message-wrapper.editing {
+  pointer-events: auto !important;
+}
+
+.message-wrapper.editing .message-actions {
+  display: none;
+}
+
+.message-wrapper.editing .message-slide-content {
+  transform: none !important;
 }
 </style> 
