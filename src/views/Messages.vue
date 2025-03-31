@@ -5,13 +5,13 @@
       <div class="nav-left">
         <i v-if="!isEditing" class="material-icons" @click="router.back()">arrow_back</i>
         <i v-else class="material-icons" @click="cancelEdit">close</i>
-        <h1>{{ isEditing ? `已选择 ${selectedMessages.length} 项` : '消息' }}</h1>
+        <h1>{{ isEditing ? $t('message.selectedCount', { count: selectedMessages.length }) : $t('message.title') }}</h1>
       </div>
       <div class="nav-right">
-        <span v-if="!isEditing" class="edit-btn" @click="startEdit">编辑</span>
+        <span v-if="!isEditing" class="edit-btn" @click.stop.prevent="startEdit">{{ $t('message.edit') }}</span>
         <template v-else>
-          <span class="action-text" @click="handleBatchDelete" v-if="selectedMessages.length > 0">删除</span>
-          <span class="action-text" @click="selectAll">{{ isAllSelected ? '取消全选' : '全选' }}</span>
+          <span class="action-text" @click="handleBatchDelete" v-if="selectedMessages.length > 0">{{ $t('message.delete') }}</span>
+          <span class="action-text" @click="selectAll">{{ isAllSelected ? $t('message.cancelSelect') : $t('message.selectAll') }}</span>
         </template>
       </div>
     </div>
@@ -19,7 +19,7 @@
     <!-- 下拉刷新指示器 -->
     <div class="refresh-indicator" :class="{ 'refreshing': isRefreshing }">
       <i class="material-icons" :style="{ transform: `rotate(${refreshDistance.value * 3}deg)` }">refresh</i>
-      <span>{{ isRefreshing ? '正在刷新...' : '下拉刷新' }}</span>
+      <span>{{ isRefreshing ? $t('home.refreshing') : $t('home.pullToRefresh') }}</span>
     </div>
 
     <!-- 消息列表 -->
@@ -65,29 +65,36 @@
         <div class="message-actions" v-if="!isEditing">
           <div class="action-btn mark-read" v-if="message.unread" @click="handleMarkRead(message)">
             <i class="material-icons">done_all</i>
-            <span>已读</span>
+            <span>{{ $t('message.markRead') }}</span>
           </div>
           <div class="action-btn delete" @click="handleDelete(message)">
             <i class="material-icons">delete</i>
-            <span>删除</span>
+            <span>{{ $t('message.delete') }}</span>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- 聊天面板 -->
+    <ChatPanel
+      v-if="showChat"
+      :target-user="currentChatUser"
+      @close="closeChat"
+    />
+
     <!-- 单条消息删除确认弹窗 -->
     <ConfirmDialog
       v-model="showDeleteDialog"
-      title="删除消息"
-      message="确定要删除这条消息吗？"
+      :title="$t('message.delete')"
+      :message="$t('message.confirmDelete')"
       @confirm="confirmDelete"
     />
     
     <!-- 批量删除确认弹窗 -->
     <ConfirmDialog
       v-model="showBatchDeleteDialog"
-      title="批量删除"
-      :message="`确定要删除选中的 ${selectedMessages.length} 条消息吗？`"
+      :title="$t('message.batchDelete')"
+      :message="$t('message.confirmBatchDelete', { count: selectedMessages.length })"
       @confirm="confirmBatchDelete"
     />
   </div>
@@ -96,9 +103,12 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import ChatPanel from '../components/ChatPanel.vue'
 
 const router = useRouter()
+const { t } = useI18n()
 const currentSlideElement = ref(null)
 const isEditing = ref(false)
 const selectedMessages = ref([])

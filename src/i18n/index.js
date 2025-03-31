@@ -1,4 +1,6 @@
 import { createI18n } from 'vue-i18n'
+import zh from '../locales/zh'
+import en from '../locales/en'
 
 // 中文语言包
 const zhCN = {
@@ -77,17 +79,14 @@ const zhCN = {
   }
 }
 
-// 创建i18n实例，使用legacy模式
 const i18n = createI18n({
-  legacy: false,
-  locale: 'zh-CN',
-  fallbackLocale: 'zh-CN',
+  legacy: false, // 使用 Composition API 模式
+  locale: localStorage.getItem('language') || 'zh', // 默认语言
+  fallbackLocale: 'en', // 备用语言
   messages: {
-    'zh-CN': zhCN
-  },
-  silentTranslationWarn: true,
-  missingWarn: false,
-  fallbackWarn: false
+    zh,
+    en
+  }
 })
 
 // 导出切换语言的方法

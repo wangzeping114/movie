@@ -4,48 +4,56 @@
       <!-- <div class="logo">
         <img src="@/assets/images/logo.png" alt="Logo">
       </div> -->
-      <h1 class="title">{{ t('login.title') }}</h1>
-      <p class="subtitle">{{ isLogin ? t('login.welcomeBack') : t('login.welcomeJoin') }}</p>
+      <h1 class="title">{{ $t('login.title') }}</h1>
+      <p class="subtitle">{{ isLogin ? $t('login.welcomeBack') : $t('login.welcomeJoin') }}</p>
     </div>
 
     <form @submit.prevent="handleSubmit" class="login-form">
       <div class="form-group">
-        <label>{{ t('login.username') }}</label>
+        <label>{{ $t('login.username') }}</label>
         <input 
           type="text" 
           v-model="form.username" 
-          :placeholder="t('login.username')"
+          :placeholder="$t('login.username')"
           required
         >
       </div>
       
       <div class="form-group">
-        <label>{{ t('login.password') }}</label>
+        <label>{{ $t('login.password') }}</label>
         <input 
           :type="showPassword ? 'text' : 'password'"
           v-model="form.password" 
-          :placeholder="t('login.password')"
+          :placeholder="$t('login.password')"
           required
         >
       </div>
       
       <div class="form-group" v-if="!isLogin">
-        <label>{{ t('login.confirmPassword') }}</label>
+        <label>{{ $t('login.confirmPassword') }}</label>
         <input 
           :type="showConfirmPassword ? 'text' : 'password'"
           v-model="form.confirmPassword" 
-          :placeholder="t('login.confirmPassword')"
+          :placeholder="$t('login.confirmPassword')"
           required
         >
       </div>
 
+      <div class="options">
+        <label class="remember-me">
+          <input type="checkbox" v-model="rememberMe">
+          <span>{{ $t('login.rememberMe') }}</span>
+        </label>
+        <a href="#" class="forgot-password">{{ $t('login.forgotPassword') }}</a>
+      </div>
+
       <button type="submit" class="login-btn" :class="{ loading: isLoading }">
-        {{ t('login.submit') }}
+        {{ $t('login.submit') }}
       </button>
     </form>
 
     <!-- <div class="other-login">
-      <span>{{ t('login.otherLogin') }}</span>
+      <span>{{ $t('login.otherLogin') }}</span>
     </div> -->
 
     <!-- <div class="social-login">
@@ -61,15 +69,15 @@
     </div> -->
 
     <div class="register-link">
-      {{ isLogin ? t('login.noAccount') : t('login.haveAccount') }}
+      {{ isLogin ? $t('login.noAccount') : $t('login.haveAccount') }}
       <a @click.prevent="toggleMode" class="switch-link">
-        {{ isLogin ? t('login.switchToRegister') : t('login.switchToLogin') }}
+        {{ isLogin ? $t('login.switchToRegister') : $t('login.switchToLogin') }}
       </a>
     </div>
 
     <div class="language-selector">
       <div class="selected-language" @click="showLanguageDropdown = !showLanguageDropdown">
-        <img :src="getFlagUrl(currentLanguage)" :alt="t('languageName')" class="flag-icon">
+        <img :src="getFlagUrl(currentLanguage)" :alt="$t('languageName')" class="flag-icon">
       </div>
       <div class="language-dropdown" v-if="showLanguageDropdown">
         <div 
@@ -108,6 +116,7 @@ const currentLanguage = ref(localStorage.getItem('language') || 'zh-CN')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const showLanguageDropdown = ref(false)
+const rememberMe = ref(false)
 
 // 添加Toast状态
 const toast = reactive({
@@ -189,7 +198,7 @@ const toggleMode = () => {
 
 const handleSubmit = async () => {
   if (!isLogin.value && form.password !== form.confirmPassword) {
-    showToast(t('login.passwordMismatch'), 'error')
+    showToast($t('login.passwordMismatch'), 'error')
     return
   }
 
@@ -203,7 +212,7 @@ const handleSubmit = async () => {
       isLoggedIn: true
     }))
     
-    showToast(isLogin.value ? t('login.loginSuccess') : t('login.registerSuccess'), 'success')
+    showToast(isLogin.value ? $t('login.loginSuccess') : $t('login.registerSuccess'), 'success')
     
     // 延迟导航，让用户能看到成功提示
     setTimeout(() => {
@@ -212,7 +221,7 @@ const handleSubmit = async () => {
     }, 1000)
   } catch (error) {
     console.error('Login error:', error)
-    showToast(t('login.error'), 'error')
+    showToast($t('login.error'), 'error')
   } finally {
     isLoading.value = false
   }
@@ -786,5 +795,69 @@ onUnmounted(() => {
 .toast-fade-leave-to {
   opacity: 0;
   transform: translate(-50%, -20px);
+}
+
+.options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-me input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.remember-me input[type="checkbox"]:checked {
+  background: #d4af37;
+  border-color: #d4af37;
+}
+
+.forgot-password {
+  color: #d4af37;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  padding: 4px 0;
+  transition: all 0.3s ease;
+}
+
+.forgot-password::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #d4af37;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+.forgot-password:hover {
+  color: #e5c158;
+}
+
+.forgot-password:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 </style> 
