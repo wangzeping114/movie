@@ -13,8 +13,9 @@
         <label>{{ $t('login.username') }}</label>
         <input 
           type="text" 
-          v-model="form.username" 
+          v-model="formData.username" 
           :placeholder="$t('login.username')"
+          :data-msg="$t('login.usernameRequired')"
           required
         >
       </div>
@@ -23,8 +24,9 @@
         <label>{{ $t('login.password') }}</label>
         <input 
           :type="showPassword ? 'text' : 'password'"
-          v-model="form.password" 
+          v-model="formData.password" 
           :placeholder="$t('login.password')"
+          :data-msg="$t('login.passwordRequired')"
           required
         >
       </div>
@@ -33,8 +35,9 @@
         <label>{{ $t('login.confirmPassword') }}</label>
         <input 
           :type="showConfirmPassword ? 'text' : 'password'"
-          v-model="form.confirmPassword" 
+          v-model="formData.confirmPassword" 
           :placeholder="$t('login.confirmPassword')"
+          :data-msg="$t('login.confirmPasswordRequired')"
           required
         >
       </div>
@@ -107,6 +110,8 @@ import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLanguage } from '../i18n'
+import { ElMessage } from 'element-plus'
+import { login, register } from '@/api/user'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -135,7 +140,7 @@ const languages = [
   { code: 'ko-KR', name: '한국어' }
 ]
 
-const form = reactive({
+const formData = reactive({
   username: '',
   password: '',
   confirmPassword: ''
@@ -184,9 +189,9 @@ const selectLanguage = (code) => {
 
 const toggleMode = () => {
   isLogin.value = !isLogin.value
-  form.username = ''
-  form.password = ''
-  form.confirmPassword = ''
+  formData.username = ''
+  formData.password = ''
+  formData.confirmPassword = ''
   showPassword.value = false
   showConfirmPassword.value = false
   nextTick(() => {
@@ -197,33 +202,50 @@ const toggleMode = () => {
 }
 
 const handleSubmit = async () => {
-  if (!isLogin.value && form.password !== form.confirmPassword) {
-    showToast($t('login.passwordMismatch'), 'error')
-    return
-  }
+  // 获取所有必填字段
+  const requiredFields = document.querySelectorAll('input[required]')
+  let hasError = false
 
-  isLoading.value = true
+  // 检查每个必填字段
+  requiredFields.forEach(field => {
+    if (!field.value) {
+      // 使用自定义的错误消息
+      const errorMsg = field.getAttribute('data-msg')
+      ElMessage.error(errorMsg)
+      hasError = true
+    }
+  })
+
+  if (hasError) return
+
   try {
-    // 模拟登录/注册请求
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    localStorage.setItem('user', JSON.stringify({
-      username: form.username,
-      isLoggedIn: true
-    }))
-    
-    showToast(isLogin.value ? $t('login.loginSuccess') : $t('login.registerSuccess'), 'success')
-    
-    // 延迟导航，让用户能看到成功提示
-    setTimeout(() => {
-      const from = router.currentRoute.value.query.from || '/short-video'
-      router.push(from)
-    }, 1000)
+    if (isLogin.value) {
+      // 登录逻辑
+      const res = await login(formData)
+      if (res.code === 200) {
+        ElMessage.success(t('login.loginSuccess'))
+        router.push('/')
+      } else {
+        ElMessage.error(res.message || t('login.error'))
+      }
+    } else {
+      // 注册逻辑
+      if (formData.password !== formData.confirmPassword) {
+        ElMessage.error(t('login.passwordMismatch'))
+        return
+      }
+      const res = await register(formData)
+      if (res.code === 200) {
+        ElMessage.success(t('login.registerSuccess'))
+        isLogin.value = true
+        formData.confirmPassword = ''
+      } else {
+        ElMessage.error(res.message || t('login.error'))
+      }
+    }
   } catch (error) {
-    console.error('Login error:', error)
-    showToast($t('login.error'), 'error')
-  } finally {
-    isLoading.value = false
+    console.error('操作失败:', error)
+    ElMessage.error(t('login.error'))
   }
 }
 

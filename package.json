@@ -9,7 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@microsoft/signalr": "^8.0.7",
+    "axios": "^1.9.0",
     "country-flag-icons": "^1.5.18",
+    "element-plus": "^2.9.7",
     "pinia": "^3.0.1",
     "qrcodejs2-fix": "^0.0.1",
     "uuid": "^11.1.0",
