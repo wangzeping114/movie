@@ -220,9 +220,14 @@ const handleSubmit = async () => {
 
   try {
     if (isLogin.value) {
-      // 登录逻辑
       const res = await login(formData)
-      if (res.code === 200) {
+      if (res.code === 1) {
+        ElMessage.success(t('login.loginSuccess'))
+        localStorage.setItem('token', res.data.token)
+        localStorage.setItem('userInfo', JSON.stringify({
+          username: res.data.username,
+          nickname: res.data.nickname
+        }))
         ElMessage.success(t('login.loginSuccess'))
         router.push('/')
       } else {
@@ -235,7 +240,7 @@ const handleSubmit = async () => {
         return
       }
       const res = await register(formData)
-      if (res.code === 200) {
+      if (res.code === 1) {
         ElMessage.success(t('login.registerSuccess'))
         isLogin.value = true
         formData.confirmPassword = ''

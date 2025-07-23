@@ -12,26 +12,29 @@ const service = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   config => {
-    // 这里可以统一加 token
-    // const token = localStorage.getItem('token')
-    // if (token) config.headers.Authorization = `Bearer ${token}`
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
-  error => Promise.reject(error)
+  error => {
+    return Promise.reject(error)
+  }
 )
 
-// 响应拦截器
 service.interceptors.response.use(
   response => response.data,
   error => {
-    if (error.response && error.response.status === 401) {
-      ElMessage.error('登录已过期，请重新登录')
-      // 清除本地token等信息
+    if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      // 跳转到登录页
-      router.push('/login')
+      localStorage.removeItem('userInfo')
+      window.location.href = '/login'
+    } else if (error.response?.status === 403) {
+      ElMessage.error('无权限访问该资源')
+    } else if (error.response?.status === 500) {
+      ElMessage.error('服务器内部错误，请稍后再试')
     } else {
-      // 统一错误提示
       ElMessage.error(error.response?.data?.message || '请求失败')
     }
     return Promise.reject(error)
